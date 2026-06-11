@@ -1,0 +1,132 @@
+# Plan technique — US-{{US_NUMBER}} — {{FEATURE_TITLE}}
+
+> Plan d'implémentation rédigé par `architect`. Lecture seule pour `developer` et les autres agents.
+>
+> Branche : `feature/US-{{US_NUMBER}}-{{SLUG}}`
+> Référence : `/specs/US-{{US_NUMBER}}-{{SLUG}}.md`
+
+---
+
+## 1. Composants à créer / modifier
+
+| Composant | Emplacement | Type (Server/Client) | Action |
+|---|---|---|---|
+| {{COMPONENT_1}} | `/components/{{PATH_1}}.tsx` | Server | Créer |
+| {{COMPONENT_2}} | `/app/{{PATH_2}}/page.tsx` | Server | Modifier |
+| {{COMPONENT_3}} | `/components/{{PATH_3}}.tsx` | Client | Créer |
+
+---
+
+## 2. API routes / Server Actions
+
+### {{ENDPOINT_1_NAME}}
+
+- **Type** : Server Action / Route Handler / Edge Function
+- **Fichier** : `/app/{{PATH}}/actions.ts` ou `/app/api/{{PATH}}/route.ts`
+- **Signature** :
+
+```ts
+async function {{FUNCTION_NAME}}(input: {{INPUT_TYPE}}): Promise<{{OUTPUT_TYPE}}> { ... }
+```
+
+- **Validation** : Zod schema `{{ZOD_SCHEMA}}`.
+- **Auth** : {{AUTH_REQUIREMENT}} (publique / authentifié / role X)
+- **Effets de bord** : {{SIDE_EFFECTS}}
+
+### {{ENDPOINT_2_NAME}}
+
+(Si applicable, répéter le bloc.)
+
+---
+
+## 3. Schéma BDD (delta)
+
+### Migrations à appliquer
+
+```sql
+-- /supabase/migrations/{{TIMESTAMP}}_us-{{US_NUMBER}}-{{SLUG}}.sql
+
+CREATE TABLE {{TABLE_NAME}} (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- colonnes
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- 🚨 RLS obligatoire
+ALTER TABLE {{TABLE_NAME}} ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "{{POLICY_NAME}}"
+  ON {{TABLE_NAME}}
+  FOR {{OPERATION}}  -- SELECT / INSERT / UPDATE / DELETE / ALL
+  USING ({{POLICY_CONDITION}});
+```
+
+### Index à ajouter
+
+```sql
+CREATE INDEX {{INDEX_NAME}} ON {{TABLE_NAME}} ({{COLUMNS}});
+```
+
+---
+
+## 4. Tests à écrire
+
+À destination de `tester`.
+
+### Tests unitaires
+
+- [ ] {{UNIT_TEST_1}} — couvre AC1
+- [ ] {{UNIT_TEST_2}} — couvre AC2
+
+### Tests d'intégration
+
+- [ ] {{INTEGRATION_TEST_1}} — composant `{{COMPONENT}}` rendu avec mock data
+- [ ] {{INTEGRATION_TEST_2}} — Server Action `{{FUNCTION_NAME}}` avec inputs valides/invalides
+
+### Tests E2E (Playwright)
+
+- [ ] {{E2E_TEST_1}} — golden path utilisateur de bout en bout
+- [ ] {{E2E_TEST_2}} — cas d'erreur (validation, auth refusée)
+
+**Objectif coverage** : 70 % minimum sur les fichiers modifiés.
+
+---
+
+## 5. Risques identifiés
+
+| Risque | Probabilité | Impact | Mitigation |
+|---|---|---|---|
+| {{RISK_1}} | {{PROB_1}} | {{IMPACT_1}} | {{MITIGATION_1}} |
+| {{RISK_2}} | {{PROB_2}} | {{IMPACT_2}} | {{MITIGATION_2}} |
+
+---
+
+## 6. Ordre des étapes (pour developer)
+
+À exécuter dans cet ordre.
+
+1. **Setup BDD** : appliquer la migration locale (`supabase migration up`).
+2. **Types Supabase** : régénérer les types (`supabase gen types typescript --local > types/supabase.ts`).
+3. **Server Action / endpoint** : implémenter `{{FUNCTION_NAME}}` avec validation Zod.
+4. **Composant serveur** : créer `{{COMPONENT_1}}`.
+5. **Composant client** : créer `{{COMPONENT_3}}` (si interactivité).
+6. **Intégration page** : modifier `{{COMPONENT_2}}` pour intégrer les nouveaux composants.
+7. **Vérifs locales** : `npm run lint && npm run typecheck && npm run build`.
+8. **Premier commit** : `feat(US-{{US_NUMBER}}): <résumé>`.
+
+---
+
+## 7. ADR (Architecture Decision Record)
+
+Si une décision structurante est prise dans cette feature, créer un ADR :
+
+- `/docs/adr/ADR-{{ADR_NUMBER}}-{{ADR_SLUG}}.md`
+
+Sinon : section vide.
+
+---
+
+## 8. Prochaine étape
+
+→ **STOP — validation humaine obligatoire** du plan avant d'invoquer `developer`.

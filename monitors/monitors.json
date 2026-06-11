@@ -1,0 +1,8 @@
+[
+  {
+    "name": "supabase-rls-watch",
+    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/rls-watch.sh \"${CLAUDE_PROJECT_DIR}\"",
+    "description": "Vérifie que toute nouvelle migration Supabase active RLS",
+    "when": "always"
+  }
+]

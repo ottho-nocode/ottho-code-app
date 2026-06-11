@@ -1,0 +1,126 @@
+# PRD — {{PROJECT_NAME}}
+
+> Product Requirements Document. Rédigé par `spec-writer` à partir des notes de `brainstorming`.
+>
+> Version : 1.0 — {{DATE}}
+> Statut : ⏳ Draft / ✅ Validé / 🚀 Implémenté
+
+---
+
+## 1. Vision
+
+{{ONE_LINE_VISION}}
+
+**Pourquoi ce produit, pourquoi maintenant ?**
+
+{{WHY_NOW}}
+
+---
+
+## 2. Problème résolu
+
+**Pour qui ?**
+
+{{TARGET_USERS_SUMMARY}}
+
+**Quel problème concret ?**
+
+{{PROBLEM_STATEMENT}}
+
+**Comment il est résolu aujourd'hui (sans nous) ?**
+
+{{CURRENT_ALTERNATIVES}}
+
+**Pourquoi notre solution est meilleure ?**
+
+{{DIFFERENTIATION}}
+
+---
+
+## 3. Personas
+
+### Persona 1 — {{PERSONA_1_NAME}}
+
+- **Rôle** : {{PERSONA_1_ROLE}}
+- **Contexte** : {{PERSONA_1_CONTEXT}}
+- **Problème principal** : {{PERSONA_1_PROBLEM}}
+- **Motivation** : {{PERSONA_1_MOTIVATION}}
+- **Frein** : {{PERSONA_1_BLOCKER}}
+
+### Persona 2 — {{PERSONA_2_NAME}}
+
+(Optionnel. Supprimer la section si un seul persona.)
+
+### Persona 3 — {{PERSONA_3_NAME}}
+
+(Optionnel.)
+
+---
+
+## 4. Fonctionnalités MVP
+
+Le MVP comprend les fonctionnalités strictement nécessaires pour valider l'hypothèse produit.
+
+| # | Fonctionnalité | Persona(s) ciblé(s) | Priorité |
+|---|---|---|---|
+| F1 | {{FEATURE_1}} | {{F1_PERSONAS}} | P0 |
+| F2 | {{FEATURE_2}} | {{F2_PERSONAS}} | P0 |
+| F3 | {{FEATURE_3}} | {{F3_PERSONAS}} | P0 |
+| F4 | {{FEATURE_4}} | {{F4_PERSONAS}} | P1 |
+| F5 | {{FEATURE_5}} | {{F5_PERSONAS}} | P1 |
+
+**Hors MVP (V2)** :
+
+- {{V2_FEATURE_1}}
+- {{V2_FEATURE_2}}
+
+---
+
+## 5. Modèle économique
+
+{{BUSINESS_MODEL}}
+
+(Ex : freemium avec un palier payant à X €/mois après Y essais ; commission de N % sur les transactions ; abonnement B2B annuel ; etc.)
+
+**Pricing envisagé** :
+
+| Plan | Prix | Cible | Limites |
+|---|---|---|---|
+| {{PLAN_1}} | {{PRICE_1}} | {{TARGET_1}} | {{LIMITS_1}} |
+| {{PLAN_2}} | {{PRICE_2}} | {{TARGET_2}} | {{LIMITS_2}} |
+
+---
+
+## 6. Contraintes
+
+- **Techniques** : {{TECH_CONSTRAINTS}}
+- **Légales** : {{LEGAL_CONSTRAINTS}} (RGPD, mentions légales, CGU, etc.)
+- **Budget / délais** : {{BUDGET_DELAY}}
+- **Dépendances externes** : {{EXTERNAL_DEPS}}
+
+---
+
+## 7. Métriques de succès
+
+Comment on sait que le produit fonctionne :
+
+- **Activation** : {{ACTIVATION_METRIC}} (ex : 60 % des inscrits complètent leur premier "X" en moins de Y minutes)
+- **Rétention** : {{RETENTION_METRIC}} (ex : 30 % d'actifs hebdo après 4 semaines)
+- **Revenu** (si applicable) : {{REVENUE_METRIC}}
+- **NPS / satisfaction** : {{SATISFACTION_METRIC}}
+
+---
+
+## 8. Questions ouvertes
+
+À trancher avant de passer à l'architecture :
+
+- [ ] {{OPEN_QUESTION_1}}
+- [ ] {{OPEN_QUESTION_2}}
+- [ ] {{OPEN_QUESTION_3}}
+
+---
+
+## 9. Prochaine étape
+
+→ Invoquer `architect` pour définir la stack, le schéma BDD initial, et les conventions de code.

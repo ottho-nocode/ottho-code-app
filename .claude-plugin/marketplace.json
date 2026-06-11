@@ -1,0 +1,30 @@
+{
+  "name": "ottho-code-app",
+  "metadata": {
+    "description": "Marketplace officiel du plugin ottho-code-app (formation Ottho Claude for Builders, méthode SDD complète)."
+  },
+  "owner": {
+    "name": "Ottho",
+    "url": "https://ottho.co"
+  },
+  "plugins": [
+    {
+      "name": "ottho-code-app",
+      "source": "./",
+      "description": "Méthode agence complète : SDD à 2 niveaux, 9 agents spécialisés (brainstorming, spec-writer, designer, architect, developer, code-reviewer, tester, devops, doc-writer), 10 MCP préconfigurés, 3 hooks de sécurité Git, 4 slash commands, 5 templates.",
+      "author": {
+        "name": "Ottho",
+        "url": "https://ottho.co"
+      },
+      "keywords": [
+        "ottho",
+        "sdd",
+        "spec-driven",
+        "agency",
+        "nextjs",
+        "supabase",
+        "stripe"
+      ]
+    }
+  ]
+}

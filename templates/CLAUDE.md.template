@@ -1,0 +1,113 @@
+# CLAUDE.md — {{PROJECT_NAME}}
+
+Ce fichier guide Claude Code sur ce projet. Tient lieu de "boîte noire" pour qu'un agent (humain ou IA) puisse intervenir efficacement.
+
+---
+
+## Vision
+
+{{ONE_LINE_VISION}}
+
+Détails complets : `/docs/PRD.md`.
+
+## Stack
+
+- **Framework** : Next.js 16 (App Router) + React 19 + TypeScript
+- **UI** : Tailwind CSS + shadcn/ui
+- **BDD** : Supabase (Postgres + Row Level Security)
+- **Auth** : Supabase Auth
+- **Email** : {{EMAIL_PROVIDER}} (par défaut : Brevo)
+- **Paiements** : Stripe
+- **Hébergement** : Vercel (preview deployments activés)
+- **Tests** : Vitest + Playwright
+
+## Architecture
+
+- App Router : `/app/`
+- Composants réutilisables : `/components/`
+- Logique métier serveur : `/lib/`, Server Actions dans `/app/<route>/actions.ts`
+- Migrations Supabase : `/supabase/migrations/`
+- Tests unitaires : co-localisés `<file>.test.ts(x)` ou dans `__tests__/`
+- Tests E2E : `/e2e/`
+
+Détails complets : `/docs/architecture.md`.
+
+## Sécurité — règles non-négociables
+
+1. **RLS Supabase activée** sur toute nouvelle table. Au moins une policy explicite. Aucune exception.
+2. **Aucun secret en clair** dans le repo. Variables d'env via `.env.local` (gitignored) et `process.env.X` côté Node.
+3. **Validation des inputs côté serveur** systématique (Zod ou équivalent).
+4. **Headers de sécurité** sur les endpoints publics : CSP, X-Frame-Options, Referrer-Policy.
+5. **Stripe** : sk_test_... en développement, sk_live_... uniquement en production via Vercel Environment Variables.
+6. **Tests** : projet Supabase de test isolé, jamais la base de dev partagée.
+
+## Workflow Git
+
+- `main` : production. Jamais de commit direct.
+- `develop` : intégration. Jamais de commit direct.
+- `feature/US-XX-slug` : une branche par user story.
+- `fix/*`, `refactor/*`, `chore/*` : autres travaux.
+
+**Commits préfixés** :
+- `feat(US-XX): ...` (nouvelle fonctionnalité)
+- `fix(US-XX): ...` (correction de bug)
+- `test(US-XX): ...` (tests)
+- `docs(US-XX): ...` (documentation)
+- `chore: ...`, `refactor: ...` (sans US)
+
+**PR** : feature/* → develop. develop → main à chaque release.
+
+Le plugin **ottho-code-app** active des hooks (`branch-guard.sh`, `git-safe.sh`, `secret-scan.sh`) qui appliquent ces règles automatiquement.
+
+## Conventions de code
+
+- **Composants React** : Server Components par défaut, Client Components uniquement si nécessaire (interactivité, hooks, browser API).
+- **Imports** : aliases `@/components`, `@/lib`, `@/app`. Pas de relatifs profonds.
+- **Nommage** : PascalCase pour composants, camelCase pour fonctions/variables, kebab-case pour fichiers.
+- **Types** : explicites sur les API publiques. `any` interdit, `unknown` + narrowing à la place.
+- **Tests** : un test au minimum par critère d'acceptation Given-When-Then.
+
+## MCP disponibles (via le plugin ottho-code-app)
+
+- `github`, `vercel`, `supabase`, `stripe`, `brevo`, `resend`, `notion`, `figma`, `pencil`, `context7`.
+
+Les credentials sont configurés au niveau plugin (cf `userConfig` dans `plugin.json`).
+
+## Agents disponibles (via le plugin)
+
+| Agent | Quand l'invoquer |
+|---|---|
+| `brainstorming` | Idée floue, nouveau scope, nouvelle feature à cadrer |
+| `spec-writer` | Rédaction PRD ou fiche feature SDD |
+| `designer` | Wireframes, maquettes, design tokens |
+| `architect` | Stack, plan technique, BDD, ADR |
+| `developer` | Implémentation code sur branche feature |
+| `code-reviewer` | Audit qualité/sécu/perf (lecture seule) |
+| `tester` | Tests unit + intégration + E2E |
+| `devops` | CI/CD, infra, monitoring |
+| `doc-writer` | README, doc API, guides |
+
+Méthode complète : cf skill `agency-method` du plugin.
+
+## Slash commands disponibles
+
+- `/init-agency-project` — bootstrap projet (déjà exécuté pour ce projet).
+- `/new-feature "titre"` — démarre un cycle SDD feature.
+- `/validate-feature` — phase Validate.
+- `/ship-feature` — finalisation + PR.
+
+## À ne pas faire
+
+- ❌ Commiter sur `main` ou `develop` directement.
+- ❌ `git push --force` ou `git reset --hard` sans confirmation utilisateur.
+- ❌ Créer une table Supabase sans RLS.
+- ❌ Mettre un secret en clair (même en commentaire).
+- ❌ Laisser des `console.log` en commit prod.
+- ❌ Modifier la spec ou le plan d'une feature pendant la phase Implement (re-lancer un cycle SDD si besoin).
+- ❌ Sauter la validation humaine entre les phases SDD.
+
+---
+
+**Source de vérité projet** : {{TRUTH_SOURCE}}
+- Si Notion configuré : page Notion `{{NOTION_PAGE_URL}}`
+- Sinon : dossier `/docs/` du repo.

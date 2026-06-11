@@ -1,0 +1,107 @@
+# US-{{US_NUMBER}} — {{FEATURE_TITLE}}
+
+> Fiche fonctionnalité SDD. Rédigée par `spec-writer`. Lecture seule pour tous les autres agents.
+>
+> Branche : `feature/US-{{US_NUMBER}}-{{SLUG}}`
+> Statut : ⏳ Specify / 🛠️ Plan / 💻 Implement / 🧪 Validate / 🚀 Shipped
+
+---
+
+## 1. Contexte
+
+{{CONTEXT}}
+
+Pourquoi cette feature maintenant ? Quel est le besoin utilisateur ou business sous-jacent ?
+
+---
+
+## 2. User story
+
+> **En tant que** {{PERSONA}}
+> **Je veux** {{ACTION}}
+> **Afin de** {{BENEFIT}}
+
+---
+
+## 3. Critères d'acceptation (Given-When-Then)
+
+### AC1 — {{AC1_TITLE}}
+
+```
+GIVEN {{AC1_GIVEN}}
+WHEN  {{AC1_WHEN}}
+THEN  {{AC1_THEN}}
+```
+
+### AC2 — {{AC2_TITLE}}
+
+```
+GIVEN {{AC2_GIVEN}}
+WHEN  {{AC2_WHEN}}
+THEN  {{AC2_THEN}}
+AND   {{AC2_AND}}
+```
+
+### AC3 — {{AC3_TITLE}}
+
+```
+GIVEN {{AC3_GIVEN}}
+WHEN  {{AC3_WHEN}}
+THEN  {{AC3_THEN}}
+```
+
+(Ajouter autant de critères que nécessaire. Chaque critère doit être **testable**.)
+
+---
+
+## 4. Périmètre
+
+### ✅ Inclus
+
+- {{INCLUDED_1}}
+- {{INCLUDED_2}}
+- {{INCLUDED_3}}
+
+### ❌ Exclu (hors scope de cette US)
+
+- {{EXCLUDED_1}}
+- {{EXCLUDED_2}}
+
+---
+
+## 5. Dépendances et contraintes
+
+- **Tables BDD concernées** : {{DB_TABLES}}
+- **Endpoints existants utilisés** : {{EXISTING_ENDPOINTS}}
+- **Intégrations tierces** : {{THIRD_PARTY}}
+- **Dépend d'autres US** : {{US_DEPENDENCIES}} (laisser vide si aucune)
+- **Bloque d'autres US** : {{US_BLOCKS}}
+
+---
+
+## 6. Notes UX/UI (si applicable)
+
+{{UX_NOTES}}
+
+Maquettes : {{DESIGN_LINKS}}
+(Liens Pencil/Figma fournis par `designer`. Ajouter `fileKey` et `nodeId` si Figma.)
+
+---
+
+## 7. Questions ouvertes
+
+- [ ] {{OPEN_QUESTION_1}}
+- [ ] {{OPEN_QUESTION_2}}
+
+---
+
+## 8. Prochaine étape
+
+→ Si dimension UI : invoquer `designer` pour wireframes et maquettes.
+→ Sinon : invoquer `architect` pour le plan technique.
+
+---
+
+## Historique
+
+- {{DATE}} — Création par `spec-writer`.

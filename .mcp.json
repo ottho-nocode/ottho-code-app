@@ -1,0 +1,60 @@
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp"
+    },
+    "vercel": {
+      "type": "http",
+      "url": "https://mcp.vercel.com"
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${user_config.supabase_access_token}"
+      }
+    },
+    "stripe": {
+      "type": "http",
+      "url": "https://mcp.stripe.com",
+      "headers": {
+        "Authorization": "Bearer ${user_config.stripe_secret_key}"
+      }
+    },
+    "brevo": {
+      "type": "http",
+      "url": "https://mcp.brevo.com",
+      "headers": {
+        "api-key": "${user_config.brevo_api_key}"
+      }
+    },
+    "resend": {
+      "type": "http",
+      "url": "https://mcp.resend.com",
+      "headers": {
+        "Authorization": "Bearer ${user_config.resend_api_key}"
+      }
+    },
+    "notion": {
+      "type": "http",
+      "url": "https://mcp.notion.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${user_config.notion_api_key}"
+      }
+    },
+    "figma": {
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp"
+    },
+    "pencil": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "pencil-mcp"]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com"
+    }
+  }
+}

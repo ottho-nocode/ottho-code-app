@@ -1,0 +1,10 @@
+.DS_Store
+*.log
+.env
+.env.local
+.env.*.local
+node_modules/
+
+# Fichiers internes Claude Code workspace
+.claude-exchange-counter
+resume.md
