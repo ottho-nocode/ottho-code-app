@@ -5,35 +5,36 @@
 # Plugin Ottho Code App — monitor déclaré dans monitors/monitors.json.
 # Reçoit en argument $1 = CLAUDE_PROJECT_DIR. Chaque ligne stdout devient
 # une notification visible par Claude.
+#
+# Portabilité : bash 3.2 (macOS) — pas de mapfile, pas de 'sleep infinity'.
 
 set -euo pipefail
 
 PROJECT_DIR="${1:-.}"
 MIGRATIONS_DIR="$PROJECT_DIR/supabase/migrations"
 
-if [ ! -d "$MIGRATIONS_DIR" ]; then
-    # Pas de migrations à surveiller — on attend
-    sleep infinity
-fi
+# Pas de dossier migrations : on attend qu'il apparaisse (projet sans Supabase = veille passive)
+while [ ! -d "$MIGRATIONS_DIR" ]; do
+    sleep 300
+done
 
-# État initial : liste des fichiers déjà présents
-mapfile -t initial_files < <(ls "$MIGRATIONS_DIR" 2>/dev/null | sort)
+known="$(ls "$MIGRATIONS_DIR" 2>/dev/null | sort || true)"
 
 while true; do
     sleep 10
-    mapfile -t current_files < <(ls "$MIGRATIONS_DIR" 2>/dev/null | sort)
+    current="$(ls "$MIGRATIONS_DIR" 2>/dev/null | sort || true)"
 
-    # Repérer les nouveaux fichiers
-    for f in "${current_files[@]}"; do
-        if [[ ! " ${initial_files[*]} " =~ " ${f} " ]]; then
-            filepath="$MIGRATIONS_DIR/$f"
-            if grep -qE 'CREATE TABLE' "$filepath" 2>/dev/null; then
-                if ! grep -qE 'ENABLE ROW LEVEL SECURITY' "$filepath" 2>/dev/null; then
-                    echo "⚠️  Migration $f crée une table sans 'ENABLE ROW LEVEL SECURITY'. Ajoute RLS avant de merger."
-                fi
+    # Nouveaux fichiers = présents dans current, absents de known
+    new_files="$(comm -13 <(printf '%s\n' "$known") <(printf '%s\n' "$current") 2>/dev/null || true)"
+
+    for f in $new_files; do
+        filepath="$MIGRATIONS_DIR/$f"
+        if grep -qE 'CREATE TABLE' "$filepath" 2>/dev/null; then
+            if ! grep -qE 'ENABLE ROW LEVEL SECURITY' "$filepath" 2>/dev/null; then
+                echo "Migration $f crée une table sans 'ENABLE ROW LEVEL SECURITY'. Ajoute RLS avant de merger."
             fi
         fi
     done
 
-    initial_files=("${current_files[@]}")
+    known="$current"
 done
