@@ -1,6 +1,6 @@
 # Ottho Code App — Plugin Claude Code
 
-> Méthode complète d'agence pour livrer des applications web modernes avec Claude Code. SDD à 2 niveaux, 9 agents spécialisés, 9 MCP préconfigurés, hooks de sécurité Git.
+> Méthode complète d'agence pour livrer des applications web modernes avec Claude Code. SDD à 2 niveaux, 9 agents spécialisés, 9 MCP recommandés (non installés par défaut), hooks de sécurité Git.
 
 ---
 
@@ -13,7 +13,7 @@ Agences et freelances qui construisent des apps web (Next.js + Supabase + Brevo/
 - **9 agents spécialisés** qui couvrent le cycle de vie d'une feature : Brainstorming, Spec-Writer, Designer, Architect, Developer, Code-Reviewer, Tester, DevOps, Doc-Writer.
 - **3 skills** qui orchestrent : `agency-method` (référence), `project-bootstrap` (démarrage projet), `sdd-feature-cycle` (cycle feature).
 - **4 slash commands** : `/init-agency-project`, `/new-feature`, `/validate-feature`, `/ship-feature`.
-- **9 MCP préconfigurés** : GitHub, Vercel, Supabase, Stripe, Brevo, Resend, Notion, Figma, Context7. (Pencil : fourni par l'app desktop [pencil.dev](https://pencil.dev), pas par le plugin.)
+- **9 MCP recommandés** — non installés par défaut : GitHub, Vercel, Supabase, Stripe, Brevo, Resend, Notion, Figma, Context7. À ajouter par projet, voir [Les 9 MCP recommandés](#les-9-mcp-recommandés-non-installés-par-défaut). (Pencil : fourni par l'app desktop [pencil.dev](https://pencil.dev), pas par le plugin.)
 - **3 hooks de sécurité Git** : branch-guard (anti-commit direct main/develop), git-safe (anti-reset --hard / push --force), secret-scan (anti-fuite de clés API).
 - **5 templates** : CLAUDE.md, PRD, fiche feature SDD, plan technique, .gitignore.
 
@@ -40,13 +40,7 @@ claude --plugin-url https://github.com/ottho-nocode/ottho-code-app
 claude --plugin-dir ./ottho-code-app
 ```
 
-À l'activation, Claude Code demande 3 credentials **optionnels** (GitHub PAT, Brevo, Resend), stockés dans le keychain système, jamais en clair dans `settings.json`.
-
-**Après l'installation, les MCP ne sont pas tous actifs tout de suite :**
-
-1. `context7` est connecté d'office (aucune clé).
-2. `vercel`, `supabase`, `stripe`, `notion`, `figma` attendent une authentification **OAuth** : tape `/mcp` dans Claude Code, sélectionne le serveur, le navigateur s'ouvre, tu autorises. À faire une fois par serveur.
-3. `github`, `brevo`, `resend` attendent leur **clé** : renseigne-la à l'activation du plugin, ou plus tard via `/plugin` (configure). Tant que la clé manque, le serveur apparaît "Failed to connect" dans `/mcp` : c'est normal, pas un bug.
+**Le plugin n'installe aucun serveur MCP.** Les 9 MCP de la méthode sont recommandés mais s'ajoutent par projet, selon les besoins — voir la section [Les 9 MCP recommandés](#les-9-mcp-recommandés-non-installés-par-défaut).
 
 ---
 
@@ -132,19 +126,60 @@ brainstorming → spec-writer → architect → devops
 
 ---
 
-## Les 9 MCP préconfigurés
+## Les 9 MCP recommandés (non installés par défaut)
+
+**Le plugin n'embarque aucun serveur MCP.** Chaque projet ajoute les siens : copie un des blocs ci-dessous dans le `.mcp.json` à la racine du projet, ou ajoute-les un par un avec `claude mcp add`. Avantages : pas de serveurs « Failed to connect » fantômes dans les projets qui n'en ont pas l'usage, et des credentials gérés par projet.
 
 | MCP | Usage | Authentification |
 |---|---|---|
-| `github` | Issues, PR, commits | PAT via userConfig (`github_token`) |
+| `github` | Issues, PR, commits | PAT GitHub dans le header `Authorization` |
 | `vercel` | Déploiements, preview URLs | OAuth : `/mcp` puis authentifier |
 | `supabase` | BDD, migrations, types | OAuth : `/mcp` puis authentifier |
 | `stripe` | Paiements, customers, prices | OAuth : `/mcp` puis authentifier |
-| `brevo` | Emails transactionnels (défaut) | API key via userConfig |
-| `resend` | Emails (alternative à Brevo) | API key via userConfig |
+| `brevo` | Emails transactionnels (défaut) | API key dans le header `api-key` |
+| `resend` | Emails (alternative à Brevo) | API key dans le header `Authorization` |
 | `notion` | Page projet source de vérité | OAuth : `/mcp` puis authentifier |
 | `figma` | Maquettes, design tokens | OAuth : `/mcp` puis authentifier |
-| `context7` | Doc technique à jour | aucune, connecté d'office |
+| `context7` | Doc technique à jour | aucune |
+
+Serveurs OAuth + Context7 (aucune clé dans le fichier) :
+
+```json
+{
+  "mcpServers": {
+    "vercel":   { "type": "http", "url": "https://mcp.vercel.com" },
+    "supabase": { "type": "http", "url": "https://mcp.supabase.com/mcp" },
+    "stripe":   { "type": "http", "url": "https://mcp.stripe.com" },
+    "notion":   { "type": "http", "url": "https://mcp.notion.com/mcp" },
+    "figma":    { "type": "http", "url": "https://mcp.figma.com/mcp" },
+    "context7": { "type": "http", "url": "https://mcp.context7.com/mcp" }
+  }
+}
+```
+
+Serveurs à clé — toujours via variables d'environnement, jamais de clé en clair dans le fichier :
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": { "Authorization": "Bearer ${GITHUB_PAT}" }
+    },
+    "brevo": {
+      "type": "http",
+      "url": "https://mcp.brevo.com",
+      "headers": { "api-key": "${BREVO_API_KEY}" }
+    },
+    "resend": {
+      "type": "http",
+      "url": "https://mcp.resend.com",
+      "headers": { "Authorization": "Bearer ${RESEND_API_KEY}" }
+    }
+  }
+}
+```
 
 Pour les maquettes locales, l'agent `designer` peut aussi utiliser le MCP **Pencil** : il est installé par l'application desktop [pencil.dev](https://pencil.dev), pas par ce plugin.
 
@@ -156,7 +191,7 @@ Trois scripts (`scripts/*.sh`) attachés à `PreToolUse` matcher `Bash` :
 
 | Hook | Bloque |
 |---|---|
-| `branch-guard.sh` | `git commit` ou `git push` direct sur `main` ou `develop` |
+| `branch-guard.sh` | `git commit` (si la branche du repo ciblé par la commande est `main`/`develop`) et `git push` avec refspec `main`/`develop` — repo du projet courant uniquement |
 | `git-safe.sh` | `git reset --hard`, `git push --force` (sauf `--force-with-lease`), `git checkout --`, `git clean -f`, `git branch -D`, `git rebase -i` |
 | `secret-scan.sh` | Commits incluant `.env` (sauf `.env.example`) ou patterns de clés (`sk_live_`, `sk_test_`, `re_`, `AKIA`, `ghp_`, etc.) |
 

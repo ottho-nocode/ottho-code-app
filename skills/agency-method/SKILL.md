@@ -53,11 +53,11 @@ Le plugin packe une méthode agence éprouvée : **Spec-Driven Development à 2 
 - **Hébergement** : Vercel (deux projets Supabase distincts : dev/preview et prod)
 - **Tests** : Vitest + Playwright
 
-## MCP préconfigurés
+## MCP recommandés (non installés par défaut)
 
 `github`, `vercel`, `supabase`, `stripe`, `brevo`, `resend`, `notion`, `figma`, `pencil`, `context7`.
 
-Les credentials sont demandés à l'install via `userConfig` (cf README) et stockés en keychain système.
+Le plugin n'installe aucun serveur MCP : chaque projet ajoute les siens dans son `.mcp.json` à la racine (blocs prêts à copier dans le README). Les clés passent par les variables d'environnement du projet, jamais en clair dans le fichier.
 
 ## Conventions de sécurité
 

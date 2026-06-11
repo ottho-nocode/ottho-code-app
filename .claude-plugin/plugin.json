@@ -1,7 +1,7 @@
 {
   "name": "ottho-code-app",
-  "version": "1.0.1",
-  "description": "Méthode agence pour livrer des apps web modernes avec Claude Code : SDD à 2 niveaux, 9 agents spécialisés, 9 MCP préconfigurés, hooks de sécurité Git.",
+  "version": "1.0.2",
+  "description": "Méthode agence pour livrer des apps web modernes avec Claude Code : SDD à 2 niveaux, 9 agents spécialisés, 9 MCP recommandés (non installés par défaut), hooks de sécurité Git.",
   "author": {
     "name": "Ottho",
     "url": "https://ottho.co"
@@ -18,28 +18,5 @@
     "stripe",
     "agile",
     "workflow"
-  ],
-  "userConfig": {
-    "github_token": {
-      "type": "string",
-      "title": "GitHub personal access token",
-      "description": "PAT GitHub (https://github.com/settings/tokens) pour le MCP github : repos, PRs, branch protections. Le MCP github ne propose pas d'OAuth depuis Claude Code.",
-      "sensitive": true,
-      "required": false
-    },
-    "brevo_api_key": {
-      "type": "string",
-      "title": "Brevo API key",
-      "description": "Clé API Brevo (https://app.brevo.com/settings/keys/api) pour l'envoi d'emails transactionnels. Optionnel si tu utilises Resend.",
-      "sensitive": true,
-      "required": false
-    },
-    "resend_api_key": {
-      "type": "string",
-      "title": "Resend API key",
-      "description": "Clé API Resend (https://resend.com/api-keys) si tu choisis Resend au lieu de Brevo.",
-      "sensitive": true,
-      "required": false
-    }
-  }
+  ]
 }
