@@ -2,7 +2,10 @@
   "mcpServers": {
     "github": {
       "type": "http",
-      "url": "https://api.githubcopilot.com/mcp"
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${user_config.github_token}"
+      }
     },
     "vercel": {
       "type": "http",
@@ -10,17 +13,11 @@
     },
     "supabase": {
       "type": "http",
-      "url": "https://mcp.supabase.com/mcp",
-      "headers": {
-        "Authorization": "Bearer ${user_config.supabase_access_token}"
-      }
+      "url": "https://mcp.supabase.com/mcp"
     },
     "stripe": {
       "type": "http",
-      "url": "https://mcp.stripe.com",
-      "headers": {
-        "Authorization": "Bearer ${user_config.stripe_secret_key}"
-      }
+      "url": "https://mcp.stripe.com"
     },
     "brevo": {
       "type": "http",
@@ -38,23 +35,15 @@
     },
     "notion": {
       "type": "http",
-      "url": "https://mcp.notion.com/mcp",
-      "headers": {
-        "Authorization": "Bearer ${user_config.notion_api_key}"
-      }
+      "url": "https://mcp.notion.com/mcp"
     },
     "figma": {
       "type": "http",
       "url": "https://mcp.figma.com/mcp"
     },
-    "pencil": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "pencil-mcp"]
-    },
     "context7": {
       "type": "http",
-      "url": "https://mcp.context7.com"
+      "url": "https://mcp.context7.com/mcp"
     }
   }
 }

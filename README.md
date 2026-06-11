@@ -1,6 +1,6 @@
 # Ottho Code App — Plugin Claude Code
 
-> Méthode complète d'agence pour livrer des applications web modernes avec Claude Code. SDD à 2 niveaux, 9 agents spécialisés, 10 MCP préconfigurés, hooks de sécurité Git.
+> Méthode complète d'agence pour livrer des applications web modernes avec Claude Code. SDD à 2 niveaux, 9 agents spécialisés, 9 MCP préconfigurés, hooks de sécurité Git.
 
 ---
 
@@ -13,7 +13,7 @@ Agences et freelances qui construisent des apps web (Next.js + Supabase + Brevo/
 - **9 agents spécialisés** qui couvrent le cycle de vie d'une feature : Brainstorming, Spec-Writer, Designer, Architect, Developer, Code-Reviewer, Tester, DevOps, Doc-Writer.
 - **3 skills** qui orchestrent : `agency-method` (référence), `project-bootstrap` (démarrage projet), `sdd-feature-cycle` (cycle feature).
 - **4 slash commands** : `/init-agency-project`, `/new-feature`, `/validate-feature`, `/ship-feature`.
-- **10 MCP préconfigurés** : GitHub, Vercel, Supabase, Stripe, Brevo, Resend, Notion, Figma, Pencil, Context7.
+- **9 MCP préconfigurés** : GitHub, Vercel, Supabase, Stripe, Brevo, Resend, Notion, Figma, Context7. (Pencil : fourni par l'app desktop [pencil.dev](https://pencil.dev), pas par le plugin.)
 - **3 hooks de sécurité Git** : branch-guard (anti-commit direct main/develop), git-safe (anti-reset --hard / push --force), secret-scan (anti-fuite de clés API).
 - **5 templates** : CLAUDE.md, PRD, fiche feature SDD, plan technique, .gitignore.
 
@@ -40,7 +40,13 @@ claude --plugin-url https://github.com/ottho-nocode/ottho-code-app
 claude --plugin-dir ./ottho-code-app
 ```
 
-À l'install, Claude Code vous demandera vos credentials MCP (Supabase, Stripe, Brevo, etc.) — tous **optionnels**, stockés dans le keychain système (`sensitive: true`), jamais en clair dans `settings.json`.
+À l'activation, Claude Code demande 3 credentials **optionnels** (GitHub PAT, Brevo, Resend), stockés dans le keychain système, jamais en clair dans `settings.json`.
+
+**Après l'installation, les MCP ne sont pas tous actifs tout de suite :**
+
+1. `context7` est connecté d'office (aucune clé).
+2. `vercel`, `supabase`, `stripe`, `notion`, `figma` attendent une authentification **OAuth** : tape `/mcp` dans Claude Code, sélectionne le serveur, le navigateur s'ouvre, tu autorises. À faire une fois par serveur.
+3. `github`, `brevo`, `resend` attendent leur **clé** : renseigne-la à l'activation du plugin, ou plus tard via `/plugin` (configure). Tant que la clé manque, le serveur apparaît "Failed to connect" dans `/mcp` : c'est normal, pas un bug.
 
 ---
 
@@ -126,20 +132,21 @@ brainstorming → spec-writer → architect → devops
 
 ---
 
-## Les 10 MCP préconfigurés
+## Les 9 MCP préconfigurés
 
-| MCP | Usage | Credential requis |
+| MCP | Usage | Authentification |
 |---|---|---|
-| `github` | Issues, PR, commits | OAuth via MCP |
-| `vercel` | Déploiements, preview URLs | OAuth via MCP |
-| `supabase` | BDD, migrations, types | ✅ access token (userConfig) |
-| `stripe` | Paiements, customers, prices | ✅ secret key (userConfig) |
-| `brevo` | Emails transactionnels (défaut) | ✅ API key (userConfig) |
-| `resend` | Emails (alternative à Brevo) | ✅ API key (userConfig, optionnel) |
-| `notion` | Page projet source de vérité | ✅ integration token (userConfig, optionnel) |
-| `figma` | Maquettes, design tokens | OAuth via MCP |
-| `pencil` | Maquettes basse/haute-fi | stdio (npx) |
-| `context7` | Doc technique à jour | aucun |
+| `github` | Issues, PR, commits | PAT via userConfig (`github_token`) |
+| `vercel` | Déploiements, preview URLs | OAuth : `/mcp` puis authentifier |
+| `supabase` | BDD, migrations, types | OAuth : `/mcp` puis authentifier |
+| `stripe` | Paiements, customers, prices | OAuth : `/mcp` puis authentifier |
+| `brevo` | Emails transactionnels (défaut) | API key via userConfig |
+| `resend` | Emails (alternative à Brevo) | API key via userConfig |
+| `notion` | Page projet source de vérité | OAuth : `/mcp` puis authentifier |
+| `figma` | Maquettes, design tokens | OAuth : `/mcp` puis authentifier |
+| `context7` | Doc technique à jour | aucune, connecté d'office |
+
+Pour les maquettes locales, l'agent `designer` peut aussi utiliser le MCP **Pencil** : il est installé par l'application desktop [pencil.dev](https://pencil.dev), pas par ce plugin.
 
 ---
 

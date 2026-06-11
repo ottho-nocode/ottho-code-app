@@ -1,7 +1,7 @@
 {
   "name": "ottho-code-app",
   "version": "1.0.0",
-  "description": "Méthode agence pour livrer des apps web modernes avec Claude Code : SDD à 2 niveaux, 9 agents spécialisés, 10 MCP préconfigurés, hooks de sécurité Git.",
+  "description": "Méthode agence pour livrer des apps web modernes avec Claude Code : SDD à 2 niveaux, 9 agents spécialisés, 9 MCP préconfigurés, hooks de sécurité Git.",
   "author": {
     "name": "Ottho",
     "url": "https://ottho.co"
@@ -20,45 +20,24 @@
     "workflow"
   ],
   "userConfig": {
-    "supabase_access_token": {
+    "github_token": {
       "type": "string",
-      "title": "Supabase access token",
-      "description": "Personal access token depuis le dashboard Supabase (mode dev/test uniquement, pas de prod).",
-      "sensitive": true,
-      "required": false
-    },
-    "stripe_secret_key": {
-      "type": "string",
-      "title": "Stripe secret key",
-      "description": "Clé secrète Stripe. Toujours utiliser sk_test_... en développement.",
+      "title": "GitHub personal access token",
+      "description": "PAT GitHub (https://github.com/settings/tokens) pour le MCP github : repos, PRs, branch protections. Le MCP github ne propose pas d'OAuth depuis Claude Code.",
       "sensitive": true,
       "required": false
     },
     "brevo_api_key": {
       "type": "string",
       "title": "Brevo API key",
-      "description": "Clé API Brevo pour l'envoi d'emails transactionnels (par défaut).",
+      "description": "Clé API Brevo (https://app.brevo.com/settings/keys/api) pour l'envoi d'emails transactionnels. Optionnel si tu utilises Resend.",
       "sensitive": true,
       "required": false
     },
     "resend_api_key": {
       "type": "string",
-      "title": "Resend API key (optionnel)",
-      "description": "Clé API Resend si vous préférez Resend à Brevo.",
-      "sensitive": true,
-      "required": false
-    },
-    "notion_api_key": {
-      "type": "string",
-      "title": "Notion integration token (optionnel)",
-      "description": "Token d'intégration Notion pour la page projet (source de vérité).",
-      "sensitive": true,
-      "required": false
-    },
-    "vercel_token": {
-      "type": "string",
-      "title": "Vercel token (optionnel)",
-      "description": "Token Vercel pour les déploiements automatisés via CLI.",
+      "title": "Resend API key",
+      "description": "Clé API Resend (https://resend.com/api-keys) si tu choisis Resend au lieu de Brevo.",
       "sensitive": true,
       "required": false
     }
