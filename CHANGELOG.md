@@ -2,6 +2,16 @@
 
 Tous les changements notables de ce plugin sont documentés ici. Format basé sur [Keep a Changelog](https://keepachangelog.com/) et le plugin respecte le [SemVer](https://semver.org/).
 
+## [1.1.0] — 2026-07-21
+
+### Ajouté
+
+- **Agent `security-auditor`** (10e agent) : Opus, lecture seule (`disallowedTools: Write, Edit`), `tools: Read, Glob, Grep, Bash, mcp__supabase__get_advisors`. Balaie tout le projet sur les failles transverses (secrets exposés, `NEXT_PUBLIC_` mal placé, `service_role` côté client, RLS manquante, policies trop permissives, code mort) et croise le code avec les advisors Supabase. Dicte un rapport classé bloquant / important / mineur (il n'écrit pas lui-même).
+- **Slash command `/audit-securite`** (5e commande) : orchestre `security-auditor` sur l'ensemble du projet et écrit le rapport dans `/reviews/security-audit.md`, avec récap par gravité et verdict PRÊT / CORRECTIONS REQUISES.
+- **Skill `security-checklist`** (4e skill) : la liste de contrôle avant mise en ligne (5 fronts : code, base, utilisateur, performance, environnement), chargée automatiquement quand tu prépares un lancement. Se combine avec `/audit-securite` pour la partie automatisable.
+
+Support du cours academy **« Sécurité & bonnes pratiques »** (Claude for Builders). Rien de cassant : les composants existants sont inchangés.
+
 ## [1.0.2] — 2026-06-12
 
 ### Modifié

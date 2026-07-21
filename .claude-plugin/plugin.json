@@ -1,7 +1,7 @@
 {
   "name": "ottho-code-app",
-  "version": "1.0.2",
-  "description": "Méthode agence pour livrer des apps web modernes avec Claude Code : SDD à 2 niveaux, 9 agents spécialisés, 9 MCP recommandés (non installés par défaut), hooks de sécurité Git.",
+  "version": "1.1.0",
+  "description": "Méthode agence pour livrer des apps web modernes avec Claude Code : SDD à 2 niveaux, 10 agents spécialisés (dont security-auditor), audit sécurité complet via /audit-securite, 9 MCP recommandés (non installés par défaut), hooks de sécurité Git.",
   "author": {
     "name": "Ottho",
     "url": "https://ottho.co"
@@ -17,6 +17,8 @@
     "supabase",
     "stripe",
     "agile",
-    "workflow"
+    "workflow",
+    "security",
+    "rls"
   ]
 }
