@@ -1,6 +1,6 @@
 # Ottho Code App — Plugin Claude Code
 
-> Méthode complète d'agence pour livrer des applications web modernes avec Claude Code. SDD à 2 niveaux, 9 agents spécialisés, 9 MCP recommandés (non installés par défaut), hooks de sécurité Git.
+> Méthode complète d'agence pour livrer des applications web modernes avec Claude Code. SDD à 2 niveaux, 10 agents spécialisés, audit sécurité complet, 9 MCP recommandés (non installés par défaut), hooks de sécurité Git.
 
 ---
 
@@ -10,9 +10,9 @@ Agences et freelances qui construisent des apps web (Next.js + Supabase + Brevo/
 
 ## Ce que vous obtenez en une commande
 
-- **9 agents spécialisés** qui couvrent le cycle de vie d'une feature : Brainstorming, Spec-Writer, Designer, Architect, Developer, Code-Reviewer, Tester, DevOps, Doc-Writer.
-- **3 skills** qui orchestrent : `agency-method` (référence), `project-bootstrap` (démarrage projet), `sdd-feature-cycle` (cycle feature).
-- **4 slash commands** : `/init-agency-project`, `/new-feature`, `/validate-feature`, `/ship-feature`.
+- **10 agents spécialisés** qui couvrent le cycle de vie d'une feature : Brainstorming, Spec-Writer, Designer, Architect, Developer, Code-Reviewer, Tester, DevOps, Doc-Writer, Security-Auditor.
+- **4 skills** qui orchestrent : `agency-method` (référence), `project-bootstrap` (démarrage projet), `sdd-feature-cycle` (cycle feature), `security-checklist` (contrôle avant mise en ligne).
+- **5 slash commands** : `/init-agency-project`, `/new-feature`, `/validate-feature`, `/audit-securite`, `/ship-feature`.
 - **9 MCP recommandés** — non installés par défaut : GitHub, Vercel, Supabase, Stripe, Brevo, Resend, Notion, Figma, Context7. À ajouter par projet, voir [Les 9 MCP recommandés](#les-9-mcp-recommandés-non-installés-par-défaut). (Pencil : fourni par l'app desktop [pencil.dev](https://pencil.dev), pas par le plugin.)
 - **3 hooks de sécurité Git** : branch-guard (anti-commit direct main/develop), git-safe (anti-reset --hard / push --force), secret-scan (anti-fuite de clés API).
 - **5 templates** : CLAUDE.md, PRD, fiche feature SDD, plan technique, .gitignore.
@@ -80,6 +80,14 @@ Lance `code-reviewer` (audit) puis `tester` (tests + coverage).
 
 Met à jour la doc, push, ouvre la PR vers `develop`.
 
+### Auditer la sécurité
+
+```
+/audit-securite
+```
+
+Lance `security-auditor` sur tout le projet (secrets, RLS + advisors Supabase, code mort) et écrit le rapport classé dans `/reviews/security-audit.md`. À dérouler avant une mise en ligne, avec le skill `security-checklist`.
+
 ---
 
 ## Cycle SDD à 2 niveaux
@@ -108,7 +116,7 @@ brainstorming → spec-writer → architect → devops
 
 ---
 
-## Les 9 agents
+## Les 10 agents
 
 | Agent | Modèle | Phase | Rôle court |
 |---|---|---|---|
@@ -121,6 +129,7 @@ brainstorming → spec-writer → architect → devops
 | `tester` | sonnet | Validate | Tests unit + intégration + E2E |
 | `devops` | sonnet | Bootstrap + après-coup | CI/CD, infra, monitoring |
 | `doc-writer` | sonnet | Post-Validate | README, doc API, guides |
+| `security-auditor` | opus | Avant mise en ligne | Audit sécu transverse : secrets, RLS, code mort (lecture seule) |
 
 **Règle d'or** : chaque agent recommande le suivant. L'orchestration est faite par les slash commands ou par vous. Un agent n'invoque jamais directement un autre agent.
 
