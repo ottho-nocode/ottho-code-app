@@ -94,7 +94,7 @@ Lance `security-auditor` sur tout le projet (secrets, RLS + advisors Supabase, c
 /pipeline
 ```
 
-Ouvre l'app locale `ottho-pipeline` dans le navigateur : carte des agents, agent en cours en direct, avancement de chaque `US-XX`, questions posées par les agents (tu y réponds dans la page, la réponse est écrite dans la spec). Elle ne lance rien. Alimentée par deux hooks `PreToolUse` / `PostToolUse` sur les sub-agents, qui écrivent `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquants).
+Rouvre l'app locale `ottho-pipeline` dans le navigateur si elle tourne, sinon explique comment la lancer. Le pipeline se lance dans un terminal ordinaire, dans le dossier du projet : `npx ottho-pipeline` (Ctrl+C pour l'arrêter). On y voit la carte des agents, l'agent en cours et ce qu'il fait en direct, l'avancement de chaque `US-XX`, les questions des agents (réponse écrite dans la spec), les livrables à valider, les éléments de marque (logo, polices…), et un terminal Claude Code intégré (« Envoyer à Claude » y tape le prompt de l'étape suivante). Alimentée par les hooks `PreToolUse` / `PostToolUse` / `SubagentStop`, qui écrivent `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquants).
 
 ---
 
