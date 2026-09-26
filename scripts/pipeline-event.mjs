@@ -6,8 +6,10 @@
 //   launch : PostToolUse d'un sub-agent lancé en arrière-plan (relie tool_use_id et agentId) ;
 //   end    : SubagentStop (vraie fin, réponse lue dans la transcription) ou PostToolUse synchrone ;
 //   activity : PreToolUse d'un outil appelé DANS un sous-agent (agent_id présent) : outil + détail court.
-// Métadonnées seulement : ni prompt ni réponse, sauf les questions du bloc « Questions
-// pour toi » (10 au plus, 300 caractères chacune). Jamais bloquant : sortie 0.
+// Pas de prompt ni de contenu de fichier. En fin d'exécution : les questions du bloc
+// « Questions pour toi » (10 au plus, 300 caractères chacune) et le compte rendu de
+// l'agent (8 000 caractères au plus, secrets reconnaissables masqués), consultables
+// dans l'historique du pipeline. Journal local, ignoré par Git. Jamais bloquant : sortie 0.
 import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { basename, isAbsolute, join, relative } from "node:path";
@@ -20,6 +22,27 @@ const TESTS_RE = /Verdict tests\s*:\s*\**\s*(VERTS|ROUGES)/gi;
 const QUESTIONS_HEADING_RE = /^\s*[*_]*\s*Questions pour toi\s*:?\s*[*_]*\s*:?\s*$/i;
 const BULLET_RE = /^\s*(?:[-*•]|\d+[.)])\s+(.+)$/;
 const MAX_QUESTIONS = 10;
+const MAX_REPORT = 8000;
+// Mêmes familles que scripts/secret-scan.sh, élargies aux JWT (clés Supabase), GitHub, Slack.
+const SECRET_RES = [
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
+  /sk_(?:live|test)_[A-Za-z0-9]{8,}/g,
+  /\bre_[A-Za-z0-9]{20,}/g,
+  /AKIA[0-9A-Z]{16}/g,
+  /gh[pousr]_[A-Za-z0-9]{20,}/g,
+  /xkeysib-[A-Za-z0-9]{20,}/g,
+  /xox[abprs]-[A-Za-z0-9-]{10,}/g,
+  /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,
+];
+
+export function maskSecrets(text) {
+  return SECRET_RES.reduce((out, re) => out.replace(re, "[secret masqué]"), text);
+}
+
+const reportOf = (text) => {
+  const clean = maskSecrets(text.trim());
+  return clean.length > MAX_REPORT ? `${clean.slice(0, MAX_REPORT)}…` : clean;
+};
 const MAX_QUESTION_LENGTH = 300;
 
 const usKey = (text) => {
@@ -129,7 +152,7 @@ const agentOf = (raw) => {
   return { agent: prefixed ? raw.split(":").pop() : raw, source: prefixed ? "plugin" : "projet" };
 };
 
-function endFields(agent, text) {
+function endFields(agent, text, report = text) {
   return {
     next: lastGroup(NEXT_RE, text)?.split(":").pop() ?? null,
     verdict:
@@ -137,6 +160,7 @@ function endFields(agent, text) {
       : agent === "tester" ? (lastGroup(TESTS_RE, text)?.toUpperCase() ?? null)
       : null,
     questions: questionsOf(text),
+    report: reportOf(report),
   };
 }
 
@@ -184,11 +208,12 @@ export function buildEvent(payload, { now = new Date(), branch = null, transcrip
     const who = launch ? { agent: launch.agent, source: launch.source ?? "plugin" } : agentOf(payload.agent_type);
     if (!who) return null;
     const closing = typeof payload.last_assistant_message === "string" ? payload.last_assistant_message : lastAssistantText(transcript);
-    const text = [handbackText(transcript), closing].filter(Boolean).join("\n\n");
+    const handback = handbackText(transcript);
+    const text = [handback, closing].filter(Boolean).join("\n\n");
     return {
       v: 1, ts, type: "end", id: launch?.id ?? null, agentId: payload.agent_id ?? null,
       agent: who.agent, source: who.source, us: launch?.us ?? usKey(branch), branch,
-      ...endFields(who.agent, text),
+      ...endFields(who.agent, text, handback || closing),
     };
   }
 

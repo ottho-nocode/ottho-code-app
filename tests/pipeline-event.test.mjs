@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { buildEvent, findLaunch, handbackText, lastAssistantText, questionsOf, textOf } from "../scripts/pipeline-event.mjs";
+import { buildEvent, findLaunch, handbackText, lastAssistantText, maskSecrets, questionsOf, textOf } from "../scripts/pipeline-event.mjs";
 
 const NOW = new Date("2026-09-26T14:05:12.000Z");
 const pre = (over = {}) => ({
@@ -74,18 +74,29 @@ test("textOf parcourt objets et tableaux", () => {
   assert.equal(textOf({ a: ["x", { b: "y" }], n: 3 }), "x\ny\n");
 });
 
-test("fin : questions du bloc « Questions pour toi », jamais le reste de la réponse", () => {
+test("fin : questions du bloc « Questions pour toi » ; compte rendu gardé, secrets masqués", () => {
   const e = buildEvent(
     post(
       "designer",
-      "Maquettes prêtes (secret : sk_live_123).\n\n**Questions pour toi :**\n\n- Faut-il un reçu PDF\n  envoyé par e-mail ?\n2. Mode sombre dans le MVP ?\n\n> **Prochaine étape recommandée** : invoquer `architect`",
+      "Maquettes prêtes (clé : sk_live_abcdefgh12345678).\n\n**Questions pour toi :**\n\n- Faut-il un reçu PDF\n  envoyé par e-mail ?\n2. Mode sombre dans le MVP ?\n\n> **Prochaine étape recommandée** : invoquer `architect`",
     ),
     { now: NOW },
   );
   assert.deepEqual(e.questions, ["Faut-il un reçu PDF envoyé par e-mail ?", "Mode sombre dans le MVP ?"]);
   assert.equal(e.next, "architect");
-  assert.equal(JSON.stringify(e).includes("sk_live"), false);
-  assert.equal(JSON.stringify(e).includes("Maquettes"), false);
+  assert.match(e.report, /^Maquettes prêtes \(clé : \[secret masqué\]\)/);
+  assert.equal(JSON.stringify(e).includes("sk_live_abcdefgh"), false);
+});
+
+test("maskSecrets : clés d'API, jetons, clés privées ; texte ordinaire intact", () => {
+  const text = [
+    "stripe sk_test_ABCDEF1234567890", "aws AKIAABCDEFGHIJKLMNOP", "gh ghp_" + "a".repeat(36),
+    "jwt eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZSJ9.c2lnbmF0dXJlLXRyZXMtbG9uZ3Vl",
+    "-----BEGIN PRIVATE KEY-----\nMIIE\n-----END PRIVATE KEY-----", "texte normal : re_trouver",
+  ].join("\n");
+  const out = maskSecrets(text);
+  assert.equal((out.match(/\[secret masqué\]/g) ?? []).length, 5);
+  assert.match(out, /texte normal : re_trouver/);
 });
 
 test("questionsOf : dernier bloc seulement, 10 au plus, 300 caractères au plus, rien sans bloc", () => {
@@ -134,6 +145,7 @@ test("SubagentStop : vraie fin, reliée au lancement, avec agent suivant et ques
     v: 1, ts: NOW.toISOString(), type: "end", id: "toolu_01L9dqNnq7SCu14k7obDmFXx", agentId: "aae4decaacc5b1643",
     agent: "spec-writer", source: "plugin", us: "US-01", branch: "feature/US-01-x",
     next: "designer", verdict: null, questions: ["Faut-il un compteur de caractères ?"],
+    report: "Fiche prête.\n\nQuestions pour toi :\n- Faut-il un compteur de caractères ?\n\n> **Prochaine étape recommandée** : invoquer `designer`",
   });
 });
 
@@ -164,6 +176,8 @@ test("vrai SubagentStop : le rapport est dans SubagentHandback, pas dans la phra
   const e = buildEvent(stop, { now: NOW, transcript, launch });
   assert.deepEqual([e.type, e.id, e.agentId, e.agent, e.us, e.next, e.verdict], ["end", launch.id, "a84e15673f59d08fc", "designer", "US-01", "architect", null]);
   assert.deepEqual(e.questions, []);
+  assert.match(e.report, /Prochaine étape recommandée : invoquer `architect`/);
+  assert.equal(e.report.includes("Le compte rendu est transmis"), false);
 });
 
 test("SubagentStop : questions du rapport de remise, type vide (agents internes de Claude Code) ignoré", () => {
