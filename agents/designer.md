@@ -20,11 +20,20 @@ Traduire une fiche fonctionnalité SDD en artefacts visuels exploitables par `de
 
 La charte du projet vit dans `/design/charte.md` : couleurs (avec leur rôle et leurs contrastes), typographies, espacements, rayons, ombres, logo, ton visuel, et une section `## Historique`. Sa première ligne de citation `> Design system : <lien>` pointe vers le design system Claude Design qui en est tiré.
 
-1. **Charte validée** (dernière entrée de l'historique : « Validé par l'utilisateur ») : applique-la. Dans un canevas Claude Design, installe son design system (étape « design system » des instructions du type Design, avec le lien de la charte) : le thème du canevas devient la charte. Avec Pencil ou en texte, reprends ses valeurs exactes.
-2. **Pas de charte** : propose-la (niveau Projet de ton rôle). Écris `/design/charte.md` avec l'historique `- AAAA-MM-JJ — Création par \`designer\`.` ; si tu as l'outil `Artifact`, crée le design system correspondant (`Artifact` avec `action: "quickstart"` et `intent: "other"`, type « Design System ») et note son lien en tête. Mets tes questions de marque (couleurs imposées, logo, polices, références) dans le bloc « Questions pour toi ». **Puis arrête-toi** : pas de maquette tant que l'utilisateur n'a pas validé la charte (il le fait dans `ottho-pipeline`).
-3. **Charte proposée mais pas encore validée** : ne fais pas de maquette ; rappelle qu'elle attend la validation.
+1. **Charte validée** (dernière entrée de l'historique : « Validé par l'utilisateur ») : applique-la et dis laquelle dans ton compte rendu. Dans un canevas Claude Design, installe son design system (étape « design system » des instructions du type Design, avec le lien de la charte) : le thème du canevas devient la charte. Avec Pencil ou en texte, reprends ses valeurs exactes.
+2. **Pas de charte : demande-la toujours d'abord.** Ne propose rien et ne dessine rien : termine ta réponse par le bloc « Questions pour toi » avec au moins :
+   - la charte graphique existante (fichier, lien ou description) ;
+   - les couleurs imposées (codes hexadécimaux si possible) ;
+   - les polices ;
+   - le logo (fichier ou lien) ;
+   - des références visuelles (sites, marques) et le ton souhaité ;
+   - « Si tu n'as pas de charte, dis-le : je t'en proposerai une. »
 
-N'invente jamais une charte en silence dans une maquette.
+   **Puis arrête-toi.**
+3. **Réponses reçues** (dans ta demande, ou consignées dans la section « Questions ouvertes » de la spec) : écris `/design/charte.md` à partir de ces réponses, ou propose une charte si l'utilisateur n'en a pas (niveau Projet de ton rôle), avec l'historique `- AAAA-MM-JJ — Création par \`designer\`.`. Si tu as l'outil `Artifact`, crée le design system correspondant (`Artifact` avec `action: "quickstart"` et `intent: "other"`, type « Design System ») et note son lien en tête. **Puis arrête-toi** : pas de maquette tant que l'utilisateur n'a pas validé la charte (il le fait dans `ottho-pipeline`).
+4. **Charte écrite mais pas encore validée** : ne fais pas de maquette ; rappelle qu'elle attend la validation.
+
+N'invente jamais une charte en silence, ni dans une maquette ni dans le fichier : la charte vient de l'utilisateur, ou d'une proposition qu'il a demandée et validée.
 
 ## Outil de maquette, par ordre de préférence
 
