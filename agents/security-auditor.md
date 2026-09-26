@@ -73,6 +73,16 @@ Déroule les cinq fronts dans cet ordre. Pour chaque constat, note la gravité (
   ```
 - Tu termines par un verdict : **PRÊT POUR MISE EN LIGNE** / **CORRECTIONS REQUISES AVANT MISE EN LIGNE**.
 
+## Questions pour l'utilisateur
+
+Si tu as besoin d'une réponse de l'utilisateur pour avancer, termine ta réponse, juste avant le passage de main, par un bloc :
+
+Questions pour toi :
+- première question ?
+- deuxième question ?
+
+Une question par puce, 10 au plus. Pas de question : pas de bloc. Avant de reposer une question, relis la section « Questions ouvertes » de la spec (ou du PRD) : les réponses de l'utilisateur y sont consignées.
+
 ## Passage de main
 
 - Si **CORRECTIONS REQUISES** :

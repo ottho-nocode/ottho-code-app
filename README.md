@@ -12,7 +12,7 @@ Agences et freelances qui construisent des apps web (Next.js + Supabase + Brevo/
 
 - **10 agents spécialisés** qui couvrent le cycle de vie d'une feature : Brainstorming, Spec-Writer, Designer, Architect, Developer, Code-Reviewer, Tester, DevOps, Doc-Writer, Security-Auditor.
 - **4 skills** qui orchestrent : `agency-method` (référence), `project-bootstrap` (démarrage projet), `sdd-feature-cycle` (cycle feature), `security-checklist` (contrôle avant mise en ligne).
-- **5 slash commands** : `/init-agency-project`, `/new-feature`, `/validate-feature`, `/audit-securite`, `/ship-feature`.
+- **6 slash commands** : `/init-agency-project`, `/new-feature`, `/validate-feature`, `/audit-securite`, `/ship-feature`, `/pipeline`.
 - **9 MCP recommandés** — non installés par défaut : GitHub, Vercel, Supabase, Stripe, Brevo, Resend, Notion, Figma, Context7. À ajouter par projet, voir [Les 9 MCP recommandés](#les-9-mcp-recommandés-non-installés-par-défaut). (Pencil : fourni par l'app desktop [pencil.dev](https://pencil.dev), pas par le plugin.)
 - **3 hooks de sécurité Git** : branch-guard (anti-commit direct main/develop), git-safe (anti-reset --hard / push --force), secret-scan (anti-fuite de clés API).
 - **5 templates** : CLAUDE.md, PRD, fiche feature SDD, plan technique, .gitignore.
@@ -87,6 +87,14 @@ Met à jour la doc, push, ouvre la PR vers `develop`.
 ```
 
 Lance `security-auditor` sur tout le projet (secrets, RLS + advisors Supabase, code mort) et écrit le rapport classé dans `/reviews/security-audit.md`. À dérouler avant une mise en ligne, avec le skill `security-checklist`.
+
+### Voir le pipeline
+
+```
+/pipeline
+```
+
+Ouvre l'app locale `ottho-pipeline` dans le navigateur : carte des agents, agent en cours en direct, avancement de chaque `US-XX`, questions posées par les agents (tu y réponds dans la page, la réponse est écrite dans la spec). Elle ne lance rien. Alimentée par deux hooks `PreToolUse` / `PostToolUse` sur les sub-agents, qui écrivent `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquants).
 
 ---
 

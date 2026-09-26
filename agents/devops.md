@@ -56,6 +56,16 @@ Tu travailles sur `develop` (setup initial) ou sur des branches `chore/devops-*`
 - Configuration : fichiers `.github/workflows/*.yml`, `vercel.json`, `.env.example`.
 - Documentation : `/docs/devops.md`.
 
+## Questions pour l'utilisateur
+
+Si tu as besoin d'une réponse de l'utilisateur pour avancer, termine ta réponse, juste avant le passage de main, par un bloc :
+
+Questions pour toi :
+- première question ?
+- deuxième question ?
+
+Une question par puce, 10 au plus. Pas de question : pas de bloc. Avant de reposer une question, relis la section « Questions ouvertes » de la spec (ou du PRD) : les réponses de l'utilisateur y sont consignées.
+
 ## Passage de main
 
 - **Niveau projet (bootstrap)** :

@@ -2,6 +2,20 @@
 
 Tous les changements notables de ce plugin sont documentés ici. Format basé sur [Keep a Changelog](https://keepachangelog.com/) et le plugin respecte le [SemVer](https://semver.org/).
 
+## [1.2.0] — 2026-09-26
+
+### Ajouté
+
+- **Commande `/pipeline`** (6e commande) : ouvre l'app locale `ottho-pipeline` (carte des agents, agent actif en direct, avancement des features `US-XX`, questions des agents avec réponse enregistrée dans la spec).
+- **Hooks `PreToolUse` / `PostToolUse` sur les sub-agents** : journalisent début, fin, agent recommandé, verdict et questions du bloc « Questions pour toi » dans `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquant, sans effet si Node est absent).
+
+### Modifié
+
+- **Les 10 agents** : section « Questions pour l'utilisateur » (bloc `Questions pour toi :` en fin de réponse quand une réponse est nécessaire pour avancer).
+- **Agent `tester`** : termine toujours par `Verdict tests : VERTS` ou `Verdict tests : ROUGES`.
+- **Agent `spec-writer`** : questions ouvertes au format `- [ ] question ?`, reprise de `docs/questions/US-XX.md`, passage de main au format standard « Prochaine étape recommandée ».
+- **Template `.gitignore`** : ignore `.claude/pipeline-events.jsonl`.
+
 ## [1.1.0] — 2026-07-21
 
 ### Ajouté

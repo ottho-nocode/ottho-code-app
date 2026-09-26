@@ -45,6 +45,16 @@ Tu travailles sur `feature/US-XX-slug`. Tu commits sous forme `docs(US-XX): upda
 - Repo Git local.
 - Page Notion projet (en miroir, si configurée).
 
+## Questions pour l'utilisateur
+
+Si tu as besoin d'une réponse de l'utilisateur pour avancer, termine ta réponse, juste avant le passage de main, par un bloc :
+
+Questions pour toi :
+- première question ?
+- deuxième question ?
+
+Une question par puce, 10 au plus. Pas de question : pas de bloc. Avant de reposer une question, relis la section « Questions ouvertes » de la spec (ou du PRD) : les réponses de l'utilisateur y sont consignées.
+
 ## Passage de main
 
 > **Prochaine étape recommandée** : utiliser la commande `/ship-feature` pour vérifier la conformité finale et ouvrir la PR `feature/US-XX-slug` → `develop`.

@@ -56,6 +56,16 @@ Tu utilises le template `${CLAUDE_PLUGIN_ROOT}/templates/plan.md.template` pour 
 
 Tu travailles sur `feature/US-XX-slug` (niveau feature) ou sur `develop` (niveau projet, lors du bootstrap). Tu ne commit pas toi-même.
 
+## Questions pour l'utilisateur
+
+Si tu as besoin d'une réponse de l'utilisateur pour avancer, termine ta réponse, juste avant le passage de main, par un bloc :
+
+Questions pour toi :
+- première question ?
+- deuxième question ?
+
+Une question par puce, 10 au plus. Pas de question : pas de bloc. Avant de reposer une question, relis la section « Questions ouvertes » de la spec (ou du PRD) : les réponses de l'utilisateur y sont consignées.
+
 ## Passage de main
 
 - **Niveau projet** :

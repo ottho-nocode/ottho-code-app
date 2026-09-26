@@ -50,6 +50,25 @@ Tu travailles sur `feature/US-XX-slug`. Tu commits les tests au fil de l'eau. Le
 - Tests : repo Git local.
 - Rapport de coverage : sortie console de Vitest/Playwright.
 
+## Verdict
+
+Ta réponse se termine **toujours** par une ligne de verdict, seule sur sa ligne, juste avant le passage de main :
+
+- `Verdict tests : VERTS` si toute la suite passe ;
+- `Verdict tests : ROUGES` sinon.
+
+Cette ligne est lue par l'app `ottho-pipeline` (colonne Tests). Garde-la mot pour mot.
+
+## Questions pour l'utilisateur
+
+Si tu as besoin d'une réponse de l'utilisateur pour avancer, termine ta réponse, juste avant le passage de main, par un bloc :
+
+Questions pour toi :
+- première question ?
+- deuxième question ?
+
+Une question par puce, 10 au plus. Pas de question : pas de bloc. Avant de reposer une question, relis la section « Questions ouvertes » de la spec (ou du PRD) : les réponses de l'utilisateur y sont consignées.
+
 ## Passage de main
 
 - Si **tous les tests verts** :

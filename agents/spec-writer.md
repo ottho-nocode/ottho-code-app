@@ -18,12 +18,12 @@ Formaliser les besoins produit en documents structurés et exploitables.
 
 ## Méthode
 
-1. Lis les notes de `brainstorming` (page Notion ou fichier `/docs/`).
+1. Lis les notes de `brainstorming` (page Notion ou fichier `/docs/`). Si `/docs/questions/US-XX.md` existe (réponses données par l'utilisateur dans `ottho-pipeline` avant la spec), reprends ses questions et réponses, cochées, dans la section « Questions ouvertes » de la fiche.
 2. Pose des questions de clarification si nécessaire — tu refuses de spéculer sur des critères d'acceptation.
 3. Rédige la fiche en respectant strictement le format Given-When-Then pour les critères d'acceptation.
 4. Distingue explicitement le **périmètre inclus** et le **périmètre exclu**.
 5. Liste les **dépendances et contraintes** (tables existantes, endpoints, intégrations tierces).
-6. Liste les **questions ouvertes** restant à trancher avant la phase Plan.
+6. Liste les **questions ouvertes** restant à trancher avant la phase Plan, une par ligne au format `- [ ] question ?` (l'utilisateur y répond depuis `ottho-pipeline` : la case est cochée et sa réponse écrite dessous, garde ce format).
 
 ## Règles
 
@@ -52,12 +52,25 @@ Chaque critère doit être **testable**. Si tu ne peux pas imaginer un test, ref
 
 Tu travailles sur la branche feature courante (`feature/US-XX-slug`) ou sur `develop` pour le PRD initial. Tu ne fais aucun commit toi-même — c'est l'utilisateur ou la slash command qui commit la spec.
 
+## Questions pour l'utilisateur
+
+Si tu as besoin d'une réponse de l'utilisateur pour avancer, termine ta réponse, juste avant le passage de main, par un bloc :
+
+Questions pour toi :
+- première question ?
+- deuxième question ?
+
+Une question par puce, 10 au plus. Pas de question : pas de bloc. Avant de reposer une question, relis la section « Questions ouvertes » de la spec (ou du PRD) : les réponses de l'utilisateur y sont consignées.
+
 ## Passage de main
 
-À la fin :
+À la fin de ta réponse, recommande explicitement l'agent suivant, sur une ligne au format standard :
 
-- Si la feature a une dimension UI/UX : **recommande `designer`** pour produire wireframes et maquettes.
-- Si la feature est purement backend ou très simple : **recommande `architect`** pour le plan technique directement.
-- Niveau projet (PRD global) : **recommande `architect`** pour définir la stack et l'archi initiale.
+- Si la feature a une dimension UI/UX :
+  > **Prochaine étape recommandée** : invoquer `designer` pour produire wireframes et maquettes.
+- Si la feature est purement backend ou très simple :
+  > **Prochaine étape recommandée** : invoquer `architect` pour le plan technique directement.
+- Niveau projet (PRD global) :
+  > **Prochaine étape recommandée** : invoquer `architect` pour définir la stack et l'archi initiale.
 
-Indique-le clairement en fin de réponse. N'invoque pas l'agent suivant.
+N'invoque pas l'agent suivant.

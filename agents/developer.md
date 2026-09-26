@@ -46,6 +46,16 @@ Implémenter le code d'une user story sur sa branche dédiée, en suivant strict
 - Code : repo Git local.
 - État d'avancement : tu peux logguer dans la page Notion projet (si MCP `notion` configuré) ou simplement résumer à la fin.
 
+## Questions pour l'utilisateur
+
+Si tu as besoin d'une réponse de l'utilisateur pour avancer, termine ta réponse, juste avant le passage de main, par un bloc :
+
+Questions pour toi :
+- première question ?
+- deuxième question ?
+
+Une question par puce, 10 au plus. Pas de question : pas de bloc. Avant de reposer une question, relis la section « Questions ouvertes » de la spec (ou du PRD) : les réponses de l'utilisateur y sont consignées.
+
 ## Passage de main
 
 À la fin de l'implémentation :
