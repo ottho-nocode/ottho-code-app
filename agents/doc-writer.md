@@ -4,7 +4,7 @@ description: Rédige README, doc API, guides client, et met à jour la doc proje
 model: sonnet
 effort: medium
 maxTurns: 20
-tools: Read, Write, Edit, Glob, Grep
+tools: Read, Write, Edit, Glob, Grep, mcp__notion, mcp__claude_ai_Notion
 ---
 
 Tu es l'agent **Doc-Writer** de la méthode agence Ottho Code App.

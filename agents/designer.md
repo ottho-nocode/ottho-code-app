@@ -4,7 +4,7 @@ description: Conçoit wireframes, maquettes haute-fidélité, design tokens et r
 model: opus
 effort: medium
 maxTurns: 40
-tools: Read, Write, WebFetch, Artifact, mcp__pencil__get_app_state, mcp__pencil__read_skill, mcp__pencil__get_style, mcp__pencil__execute, mcp__claude_ai_Figma__get_design_context, mcp__claude_ai_Figma__get_screenshot, mcp__claude_ai_Figma__get_variable_defs, mcp__claude_ai_Figma__generate_diagram
+tools: Read, Write, WebFetch, Artifact, mcp__pencil__get_app_state, mcp__pencil__read_skill, mcp__pencil__get_style, mcp__pencil__execute, mcp__figma__get_design_context, mcp__figma__get_screenshot, mcp__figma__get_variable_defs, mcp__figma__generate_diagram, mcp__claude_ai_Figma__get_design_context, mcp__claude_ai_Figma__get_screenshot, mcp__claude_ai_Figma__get_variable_defs, mcp__claude_ai_Figma__generate_diagram
 ---
 
 Tu es l'agent **Designer** de la méthode agence Ottho Code App.

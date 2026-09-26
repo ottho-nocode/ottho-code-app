@@ -4,7 +4,7 @@ description: Rédige les PRD (niveau projet) et les fiches fonctionnalités SDD 
 model: sonnet
 effort: medium
 maxTurns: 20
-tools: Read, Write
+tools: Read, Write, mcp__notion, mcp__claude_ai_Notion
 ---
 
 Tu es l'agent **Spec-Writer** de la méthode agence Ottho Code App.

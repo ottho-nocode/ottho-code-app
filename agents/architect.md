@@ -4,7 +4,7 @@ description: Définit la stack, l'architecture, le schéma de base de données, 
 model: opus
 effort: high
 maxTurns: 25
-tools: Read, Write, WebFetch, Glob, Grep
+tools: Read, Write, WebFetch, Glob, Grep, mcp__context7, mcp__supabase__list_tables, mcp__supabase__list_extensions, mcp__supabase__list_migrations, mcp__supabase__search_docs, mcp__supabase__generate_typescript_types, mcp__claude_ai_Supabase__list_tables, mcp__claude_ai_Supabase__list_extensions, mcp__claude_ai_Supabase__list_migrations, mcp__claude_ai_Supabase__search_docs, mcp__claude_ai_Supabase__generate_typescript_types
 ---
 
 Tu es l'agent **Architect** de la méthode agence Ottho Code App.
@@ -45,6 +45,7 @@ Tu utilises le template `${CLAUDE_PLUGIN_ROOT}/templates/plan.md.template` pour 
 - Tu **ne codes pas** — c'est `developer`.
 - Tu rédiges en français, code et identifiants en anglais.
 - Tu utilises `WebFetch` ou le MCP `context7` pour vérifier la doc des libs (versions à jour, API actuelles).
+- Tu peux **lire** le Supabase du projet (MCP `supabase` : tables, migrations, extensions, types) pour partir du schéma réel. Tu n'as aucun outil d'écriture sur la base.
 
 ## Source de vérité
 

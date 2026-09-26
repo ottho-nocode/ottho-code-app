@@ -147,17 +147,32 @@ brainstorming → spec-writer → architect → devops
 
 **Le plugin n'embarque aucun serveur MCP.** Chaque projet ajoute les siens : copie un des blocs ci-dessous dans le `.mcp.json` à la racine du projet, ou ajoute-les un par un avec `claude mcp add`. Avantages : pas de serveurs « Failed to connect » fantômes dans les projets qui n'en ont pas l'usage, et des credentials gérés par projet.
 
-| MCP | Usage | Authentification |
-|---|---|---|
-| `github` | Issues, PR, commits | PAT GitHub dans le header `Authorization` |
-| `vercel` | Déploiements, preview URLs | OAuth : `/mcp` puis authentifier |
-| `supabase` | BDD, migrations, types | OAuth : `/mcp` puis authentifier |
-| `stripe` | Paiements, customers, prices | OAuth : `/mcp` puis authentifier |
-| `brevo` | Emails transactionnels (défaut) | API key dans le header `api-key` |
-| `resend` | Emails (alternative à Brevo) | API key dans le header `Authorization` |
-| `notion` | Page projet source de vérité | OAuth : `/mcp` puis authentifier |
-| `figma` | Maquettes, design tokens | OAuth : `/mcp` puis authentifier |
-| `context7` | Doc technique à jour | aucune |
+| MCP | Usage | Authentification | Utilisé par |
+|---|---|---|---|
+| `github` | Issues, PR, commits | PAT GitHub dans le header `Authorization` | devops |
+| `vercel` | Déploiements, preview URLs | OAuth : `/mcp` puis authentifier | devops |
+| `supabase` | BDD, migrations, types | OAuth : `/mcp` puis authentifier | developer, devops ; architect et security-auditor en lecture |
+| `stripe` | Paiements, customers, prices | OAuth : `/mcp` puis authentifier | developer |
+| `brevo` | Emails transactionnels (défaut) | API key dans le header `api-key` | developer |
+| `resend` | Emails (alternative à Brevo) | API key dans le header `Authorization` | developer |
+| `notion` | Page projet source de vérité | OAuth : `/mcp` puis authentifier | brainstorming, spec-writer, developer, doc-writer |
+| `figma` | Maquettes, design tokens | OAuth : `/mcp` puis authentifier | designer |
+| `context7` | Doc technique à jour | aucune | architect, developer |
+
+### Ce que chaque agent peut faire
+
+Un sous-agent ne voit que les outils de sa ligne `tools:`. Chaque agent reçoit donc les services de son métier (colonne ci-dessus), et rien d'autre. Quelques actions restent **retirées** à tous les agents (`disallowedTools`) et reviennent à l'humain :
+
+- **Supabase** : créer un projet ou une branche, confirmer un coût, fusionner, réinitialiser, mettre en pause ou restaurer ; `developer` ne déploie pas non plus d'edge function. `architect` et `security-auditor` n'ont que des outils de lecture (tables, migrations, conseils de sécurité).
+- **Vercel** : acheter un domaine, des crédits ou un abonnement.
+- **Stripe** : aucun outil n'est retiré, la protection est le compte branché. Connecte un compte de **test** (sandbox Stripe), jamais le compte réel ; `developer` s'arrête s'il voit `livemode: true`.
+
+### Garde-fous conseillés
+
+- **Supabase relié au projet de dev** : ajoute `?project_ref=<ref du projet de dev>` à l'URL du serveur, pour qu'aucun agent ne puisse atteindre la prod. Sur un projet où personne ne doit écrire en base (audit seul), ajoute aussi `&read_only=true`.
+- **Garde les noms du tableau** (`supabase`, `stripe`…) : les outils d'un serveur portent son nom (`mcp__supabase__list_tables`), et les agents les cherchent sous ce nom. Un serveur renommé (`supabase-dev`) est invisible pour eux.
+- **Connecteurs claude.ai** : Supabase, Stripe, Vercel, Notion et Figma branchés depuis claude.ai (outils `mcp__claude_ai_Supabase__…`) sont aussi reconnus par les agents, avec les mêmes interdictions.
+- Si un agent a besoin d'un service absent, il ne le contourne pas (pas de `curl` avec une clé) : il te le demande dans ses « Questions pour l'utilisateur ».
 
 Serveurs OAuth + Context7 (aucune clé dans le fichier) :
 
@@ -165,7 +180,7 @@ Serveurs OAuth + Context7 (aucune clé dans le fichier) :
 {
   "mcpServers": {
     "vercel":   { "type": "http", "url": "https://mcp.vercel.com" },
-    "supabase": { "type": "http", "url": "https://mcp.supabase.com/mcp" },
+    "supabase": { "type": "http", "url": "https://mcp.supabase.com/mcp?project_ref=REF_DU_PROJET_DE_DEV" },
     "stripe":   { "type": "http", "url": "https://mcp.stripe.com" },
     "notion":   { "type": "http", "url": "https://mcp.notion.com/mcp" },
     "figma":    { "type": "http", "url": "https://mcp.figma.com/mcp" },

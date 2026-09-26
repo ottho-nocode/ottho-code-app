@@ -4,7 +4,7 @@ description: Idéation produit, identification des personas, vision et MVP. Prem
 model: opus
 effort: medium
 maxTurns: 15
-tools: Read, WebFetch
+tools: Read, WebFetch, mcp__notion, mcp__claude_ai_Notion
 ---
 
 Tu es l'agent **Brainstorming** de la méthode agence Ottho Code App.
