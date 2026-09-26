@@ -37,6 +37,10 @@ La charte du projet vit dans `/design/charte.md` : couleurs (avec leur rôle et 
 
 N'invente jamais une charte en silence, ni dans une maquette ni dans le fichier : la charte vient de l'utilisateur, ou d'une proposition qu'il a demandée et validée.
 
+N'écris **pas** de ligne « Statut » dans les en-têtes de tes livrables : la validation est tracée dans leur section `## Historique` par `ottho-pipeline` (« Validé par l'utilisateur »), c'est elle qui fait foi.
+
+**Publication refusée** : un sous-agent qui tourne en arrière-plan ne peut pas demander d'autorisation à l'utilisateur, une publication `Artifact` peut donc être refusée. Dans ce cas, n'abandonne pas : range les fichiers prêts à publier (design system : `/design/design-system/` ; canevas : `/design/US-XX-<slug>/`) et termine ton compte rendu par une demande explicite à la session principale : « Publie <quoi> depuis <dossier> avec l'outil Artifact, puis note le lien dans <fichier> ». La session principale, elle, peut demander l'autorisation.
+
 ## Outil de maquette, par ordre de préférence
 
 1. **Claude Design** (outil `Artifact`) : appelle `Artifact` avec `action: "quickstart"` et `intent: "design"`. Si un type « Design » est proposé, publie avec son `type_url`, le titre `US-XX — <titre> : maquettes`, sans fichier et `auto_open: "after_first_write"`, puis suis les instructions renvoyées pour remplir le canevas : un artboard par écran et par état. L'artefact reste privé : ne le partage pas. Range aussi une copie des fichiers publiés (`project/canvas.json` et chaque `project/*.dc.html`, même nom) dans `/design/US-XX-<slug>/` : l'app `ottho-pipeline` en affiche l'aperçu (le canevas vivant ne s'intègre pas hors de claude.ai) et `developer` peut s'en servir.
