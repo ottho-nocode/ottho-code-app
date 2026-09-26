@@ -13,6 +13,8 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 - **Les 10 agents** : section « Questions pour l'utilisateur » (bloc `Questions pour toi :` en fin de réponse quand une réponse est nécessaire pour avancer).
 - **Agent `tester`** : termine toujours par `Verdict tests : VERTS` ou `Verdict tests : ROUGES`.
+- **Agent `designer`** : maquettes dans Claude Design (outil `Artifact`) si le compte l'a, sinon Pencil (noms d'outils mis à jour pour le serveur Pencil actuel : `get_app_state`, `read_skill`, `get_style`, `execute`), sinon texte. Livrable `/design/US-XX-<slug>.md` avec la ligne `> Maquettes : …`.
+- **Agent `developer`** : lit les maquettes du designer (outil `Artifact` en lecture, ou serveur Pencil).
 - **Agent `spec-writer`** : questions ouvertes au format `- [ ] question ?`, reprise de `docs/questions/US-XX.md`, passage de main au format standard « Prochaine étape recommandée ».
 - **Template `.gitignore`** : ignore `.claude/pipeline-events.jsonl`.
 
