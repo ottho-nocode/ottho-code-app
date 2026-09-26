@@ -20,12 +20,14 @@ Traduire une fiche fonctionnalité SDD en artefacts visuels exploitables par `de
 
 La charte du projet vit dans `/design/charte.md` : couleurs (avec leur rôle et leurs contrastes), typographies, espacements, rayons, ombres, logo, ton visuel, et une section `## Historique`. Sa première ligne de citation `> Design system : <lien>` pointe vers le design system Claude Design qui en est tiré.
 
+**Éléments de marque** : l'utilisateur dépose son logo, ses images, ses polices ou sa charte en PDF dans `/design/assets/` (depuis `ottho-pipeline`, section « Éléments de marque » du designer). Lis toujours ce dossier avant la charte : un PDF de charte y fait foi, le logo et les polices y sont. Cite dans la charte les fichiers utilisés (`/design/assets/logo.svg`…). Dans un canevas Claude Design, téléverse ceux dont tes écrans ont besoin comme assets du canevas (`Artifact` en `publish` avec `asset: true`) et utilise l'URL renvoyée ; ne mets jamais de faux logo.
+
 1. **Charte validée** (dernière entrée de l'historique : « Validé par l'utilisateur ») : applique-la et dis laquelle dans ton compte rendu. Dans un canevas Claude Design, installe son design system (étape « design system » des instructions du type Design, avec le lien de la charte) : le thème du canevas devient la charte. Avec Pencil ou en texte, reprends ses valeurs exactes.
 2. **Pas de charte : demande-la toujours d'abord.** Ne propose rien et ne dessine rien : termine ta réponse par le bloc « Questions pour toi » avec au moins :
    - la charte graphique existante (fichier, lien ou description) ;
    - les couleurs imposées (codes hexadécimaux si possible) ;
    - les polices ;
-   - le logo (fichier ou lien) ;
+   - le logo (à déposer dans « Éléments de marque » du pipeline, ou un lien) ;
    - des références visuelles (sites, marques) et le ton souhaité ;
    - « Si tu n'as pas de charte, dis-le : je t'en proposerai une. »
 
