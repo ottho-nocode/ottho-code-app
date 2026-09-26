@@ -40,6 +40,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v node >/dev/null 2>&1 && node \"${CLAUDE_PLUGIN_ROOT}\"/scripts/pipeline-event.mjs || true",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

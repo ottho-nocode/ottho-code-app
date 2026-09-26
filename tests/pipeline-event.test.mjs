@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { buildEvent, questionsOf, textOf } from "../scripts/pipeline-event.mjs";
+import { buildEvent, findLaunch, lastAssistantText, questionsOf, textOf } from "../scripts/pipeline-event.mjs";
 
 const NOW = new Date("2026-09-26T14:05:12.000Z");
 const pre = (over = {}) => ({
@@ -96,11 +96,62 @@ test("questionsOf : dernier bloc seulement, 10 au plus, 300 caractères au plus,
   assert.deepEqual(questionsOf("Aucune question ici ?"), []);
 });
 
-const fx = (name) => new URL(`./fixtures/${name}`, import.meta.url);
-test("fixtures réelles (capturées pendant la recette)", { skip: !existsSync(fx("agent-pre.json")) && "fixtures pas encore capturées" }, () => {
-  const start = buildEvent(JSON.parse(readFileSync(fx("agent-pre.json"))), { now: NOW });
-  const end = buildEvent(JSON.parse(readFileSync(fx("agent-post.json"))), { now: NOW });
-  assert.equal(start.type, "start");
-  assert.equal(end.type, "end");
-  assert.equal(start.agent, end.agent);
+const fx = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url)));
+
+test("vrais messages : début puis lancement asynchrone (pas de fausse fin)", () => {
+  const start = buildEvent(fx("agent-pre.json"), { now: NOW, branch: "feature/US-01-ajouter-une-tache-a-une-liste" });
+  assert.deepEqual([start.type, start.agent, start.source, start.us], ["start", "spec-writer", "plugin", "US-01"]);
+  const launch = buildEvent(fx("agent-post-async.json"), { now: NOW });
+  assert.deepEqual(launch, {
+    v: 1, ts: NOW.toISOString(), type: "launch", id: "toolu_01L9dqNnq7SCu14k7obDmFXx",
+    agentId: "aae4decaacc5b1643", agent: "spec-writer", source: "plugin", us: "US-01", branch: null,
+  });
+});
+
+const TRANSCRIPT = [
+  { type: "user", message: { role: "user", content: "Rédige la fiche US-01" } },
+  { type: "assistant", message: { role: "assistant", content: [{ type: "tool_use", name: "Write", input: {} }] } },
+  { type: "user", message: { role: "user", content: [{ type: "tool_result", content: "ok" }] } },
+  {
+    type: "assistant",
+    message: {
+      role: "assistant",
+      content: [{ type: "text", text: "Fiche prête.\n\nQuestions pour toi :\n- Faut-il un compteur de caractères ?\n\n> **Prochaine étape recommandée** : invoquer `designer`" }],
+    },
+  },
+].map((l) => JSON.stringify(l)).join("\n");
+
+test("lastAssistantText : dernier message texte de l'assistant dans la transcription", () => {
+  assert.match(lastAssistantText(TRANSCRIPT), /^Fiche prête\./);
+  assert.equal(lastAssistantText("pas du json\n{}"), "");
+});
+
+test("SubagentStop : vraie fin, reliée au lancement, avec agent suivant et questions", () => {
+  const payload = { hook_event_name: "SubagentStop", agent_id: "aae4decaacc5b1643", agent_type: "ottho-code-app:spec-writer", agent_transcript_path: "/t.jsonl" };
+  const launch = { id: "toolu_01L9dqNnq7SCu14k7obDmFXx", agent: "spec-writer", source: "plugin", us: "US-01" };
+  const e = buildEvent(payload, { now: NOW, branch: "feature/US-01-x", transcript: TRANSCRIPT, launch });
+  assert.deepEqual(e, {
+    v: 1, ts: NOW.toISOString(), type: "end", id: "toolu_01L9dqNnq7SCu14k7obDmFXx", agentId: "aae4decaacc5b1643",
+    agent: "spec-writer", source: "plugin", us: "US-01", branch: "feature/US-01-x",
+    next: "designer", verdict: null, questions: ["Faut-il un compteur de caractères ?"],
+  });
+});
+
+test("SubagentStop sans lancement connu ni agent_type → ignoré ; last_assistant_message prioritaire", () => {
+  assert.equal(buildEvent({ hook_event_name: "SubagentStop", agent_id: "x" }, { now: NOW }), null);
+  const e = buildEvent(
+    { hook_event_name: "SubagentStop", agent_id: "y", agent_type: "tester", last_assistant_message: "Verdict tests : ROUGES" },
+    { now: NOW, transcript: TRANSCRIPT },
+  );
+  assert.deepEqual([e.agent, e.source, e.id, e.verdict, e.next], ["tester", "projet", null, "ROUGES", null]);
+});
+
+test("findLaunch retrouve le lancement d'un agentId dans le journal", () => {
+  const journal = [
+    { v: 1, type: "start", id: "t1", agent: "designer" },
+    { v: 1, type: "launch", id: "t1", agentId: "a1", agent: "designer", source: "plugin", us: "US-01" },
+    "ligne corrompue",
+  ].map((l) => (typeof l === "string" ? l : JSON.stringify(l))).join("\n");
+  assert.deepEqual(findLaunch(journal, "a1"), { v: 1, type: "launch", id: "t1", agentId: "a1", agent: "designer", source: "plugin", us: "US-01" });
+  assert.equal(findLaunch(journal, "inconnu"), null);
 });
