@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { buildEvent, findLaunch, lastAssistantText, questionsOf, textOf } from "../scripts/pipeline-event.mjs";
+import { buildEvent, findLaunch, handbackText, lastAssistantText, questionsOf, textOf } from "../scripts/pipeline-event.mjs";
 
 const NOW = new Date("2026-09-26T14:05:12.000Z");
 const pre = (over = {}) => ({
@@ -154,4 +154,24 @@ test("findLaunch retrouve le lancement d'un agentId dans le journal", () => {
   ].map((l) => (typeof l === "string" ? l : JSON.stringify(l))).join("\n");
   assert.deepEqual(findLaunch(journal, "a1"), { v: 1, type: "launch", id: "t1", agentId: "a1", agent: "designer", source: "plugin", us: "US-01" });
   assert.equal(findLaunch(journal, "inconnu"), null);
+});
+
+test("vrai SubagentStop : le rapport est dans SubagentHandback, pas dans la phrase de clôture", () => {
+  const stop = fx("agent-stop.json");
+  const transcript = readFileSync(new URL("./fixtures/agent-transcript.jsonl", import.meta.url), "utf8");
+  assert.match(handbackText(transcript), /Prochaine étape recommandée : invoquer `architect`/);
+  const launch = { id: "toolu_011WNMGf8ZP2badoEPzs7iGy", agent: "designer", source: "plugin", us: "US-01" };
+  const e = buildEvent(stop, { now: NOW, transcript, launch });
+  assert.deepEqual([e.type, e.id, e.agentId, e.agent, e.us, e.next, e.verdict], ["end", launch.id, "a84e15673f59d08fc", "designer", "US-01", "architect", null]);
+  assert.deepEqual(e.questions, []);
+});
+
+test("SubagentStop : questions du rapport de remise, type vide (agents internes de Claude Code) ignoré", () => {
+  const transcript = JSON.stringify({
+    type: "assistant",
+    message: { role: "assistant", content: [{ type: "tool_use", name: "SubagentHandback", input: { message: "Fait.\n\nQuestions pour toi :\n- Faut-il un mode sombre ?\n\nProchaine étape recommandée : invoquer `architect`" } }] },
+  });
+  const e = buildEvent({ hook_event_name: "SubagentStop", agent_id: "z", agent_type: "ottho-code-app:designer", last_assistant_message: "Transmis." }, { now: NOW, transcript });
+  assert.deepEqual([e.next, e.questions], ["architect", ["Faut-il un mode sombre ?"]]);
+  assert.equal(buildEvent({ hook_event_name: "SubagentStop", agent_id: "i", agent_type: "", last_assistant_message: "Reading files" }, { now: NOW }), null);
 });

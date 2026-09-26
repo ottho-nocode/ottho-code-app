@@ -1,0 +1,8 @@
+{
+  "agent_id": "a84e15673f59d08fc",
+  "agent_type": "ottho-code-app:designer",
+  "hook_event_name": "SubagentStop",
+  "stop_hook_active": false,
+  "agent_transcript_path": "fixtures/agent-transcript.jsonl",
+  "last_assistant_message": "Le compte rendu est transmis à la session principale : les 4 maquettes haute-fi et l'index du canevas sont écrits, et le livrable texte est mis à jour. Rien n'a été vérifié visuellement ni committé."
+}

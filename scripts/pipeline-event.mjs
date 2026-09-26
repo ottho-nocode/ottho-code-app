@@ -88,6 +88,26 @@ export function lastAssistantText(jsonl) {
   return "";
 }
 
+// Rapport de remise du sub-agent (outil SubagentHandback) : c'est lui qui porte le
+// compte rendu, l'agent recommandé et les questions ; le dernier texte n'est souvent
+// qu'une phrase de clôture. Le plus récent, ou "".
+export function handbackText(jsonl) {
+  const lines = jsonl.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    let entry;
+    try {
+      entry = JSON.parse(lines[i]);
+    } catch {
+      continue;
+    }
+    const content = entry?.message?.content;
+    if (!Array.isArray(content)) continue;
+    const call = content.findLast((c) => c?.type === "tool_use" && c.name === "SubagentHandback");
+    if (call) return typeof call.input?.message === "string" ? call.input.message : textOf(call.input);
+  }
+  return "";
+}
+
 // Événement « launch » d'un agentId dans le journal (le plus récent), ou null.
 export function findLaunch(journal, agentId) {
   const lines = journal.split("\n");
@@ -126,7 +146,8 @@ export function buildEvent(payload, { now = new Date(), branch = null, transcrip
   if (hook === "SubagentStop") {
     const who = launch ? { agent: launch.agent, source: launch.source ?? "plugin" } : agentOf(payload.agent_type);
     if (!who) return null;
-    const text = typeof payload.last_assistant_message === "string" ? payload.last_assistant_message : lastAssistantText(transcript);
+    const closing = typeof payload.last_assistant_message === "string" ? payload.last_assistant_message : lastAssistantText(transcript);
+    const text = [handbackText(transcript), closing].filter(Boolean).join("\n\n");
     return {
       v: 1, ts, type: "end", id: launch?.id ?? null, agentId: payload.agent_id ?? null,
       agent: who.agent, source: who.source, us: launch?.us ?? usKey(branch), branch,
