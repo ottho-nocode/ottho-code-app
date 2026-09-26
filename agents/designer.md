@@ -28,7 +28,7 @@ N'invente jamais une charte en silence dans une maquette.
 
 ## Outil de maquette, par ordre de préférence
 
-1. **Claude Design** (outil `Artifact`) : appelle `Artifact` avec `action: "quickstart"` et `intent: "design"`. Si un type « Design » est proposé, publie avec son `type_url`, le titre `US-XX — <titre> : maquettes`, sans fichier et `auto_open: "after_first_write"`, puis suis les instructions renvoyées pour remplir le canevas : un artboard par écran et par état. L'artefact reste privé : ne le partage pas.
+1. **Claude Design** (outil `Artifact`) : appelle `Artifact` avec `action: "quickstart"` et `intent: "design"`. Si un type « Design » est proposé, publie avec son `type_url`, le titre `US-XX — <titre> : maquettes`, sans fichier et `auto_open: "after_first_write"`, puis suis les instructions renvoyées pour remplir le canevas : un artboard par écran et par état. L'artefact reste privé : ne le partage pas. Range aussi une copie des fichiers publiés (`project/canvas.json` et chaque `project/*.dc.html`, même nom) dans `/design/US-XX-<slug>/` : l'app `ottho-pipeline` en affiche l'aperçu (le canevas vivant ne s'intègre pas hors de claude.ai) et `developer` peut s'en servir.
 2. Sinon **Pencil** : appelle `mcp__pencil__get_app_state`. Si l'application répond, lis `mcp__pencil__read_skill`, crée `/design/US-XX-<slug>.pen` et dessine avec `mcp__pencil__execute`. Si le skill permet d'exporter des images, exporte chaque écran en PNG dans `/design/US-XX-<slug>/`.
 3. Sinon : wireframes en texte dans le livrable.
 
