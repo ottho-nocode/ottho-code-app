@@ -4,12 +4,13 @@
 // lu par l'app ottho-pipeline :
 //   start  : PreToolUse de l'outil Agent (feature tirée du prompt) ;
 //   launch : PostToolUse d'un sub-agent lancé en arrière-plan (relie tool_use_id et agentId) ;
-//   end    : SubagentStop (vraie fin, réponse lue dans la transcription) ou PostToolUse synchrone.
+//   end    : SubagentStop (vraie fin, réponse lue dans la transcription) ou PostToolUse synchrone ;
+//   activity : PreToolUse d'un outil appelé DANS un sous-agent (agent_id présent) : outil + détail court.
 // Métadonnées seulement : ni prompt ni réponse, sauf les questions du bloc « Questions
 // pour toi » (10 au plus, 300 caractères chacune). Jamais bloquant : sortie 0.
 import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
+import { basename, isAbsolute, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const US_RE = /(?<![A-Za-z])US-0*(\d{1,4})/i;
@@ -139,9 +140,45 @@ function endFields(agent, text) {
   };
 }
 
-export function buildEvent(payload, { now = new Date(), branch = null, transcript = "", launch = null } = {}) {
+const MAX_DETAIL = 120;
+const clip = (s) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, MAX_DETAIL) : "");
+
+// Détail court d'une action : jamais de contenu de fichier ni de commande complète
+// (secrets possibles) ; un chemin est rendu relatif au projet.
+export function activityDetail(tool, input = {}, projectDir = null) {
+  const path = input.file_path ?? input.notebook_path;
+  if (typeof path === "string") {
+    const rel = projectDir && isAbsolute(path) ? relative(projectDir, path) : path;
+    return clip(rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : basename(path));
+  }
+  if (tool === "Bash") return clip(input.description) || clip(String(input.command ?? "").split(/\s+/)[0]);
+  if (tool === "Glob" || tool === "Grep") return clip(input.pattern);
+  if (tool === "WebFetch") {
+    try {
+      return new URL(input.url).host;
+    } catch {
+      return "";
+    }
+  }
+  if (tool === "WebSearch") return clip(input.query);
+  if (tool === "Artifact") return clip(input.action ?? "publish");
+  if (tool === "Skill") return clip(input.skill);
+  if (tool.startsWith("mcp__")) return tool.split("__").slice(1).join(" · ");
+  return "";
+}
+
+export function buildEvent(payload, { now = new Date(), branch = null, transcript = "", launch = null, projectDir = null } = {}) {
   const hook = payload?.hook_event_name;
   const ts = now.toISOString();
+
+  // Action d'un sous-agent en cours (les hooks de l'utilisateur s'exécutent aussi
+  // dans les sous-agents, avec agent_id et agent_type).
+  const tool = payload?.tool_name;
+  if (hook === "PreToolUse" && payload.agent_id && tool && tool !== "Agent" && tool !== "Task") {
+    const who = agentOf(payload.agent_type);
+    if (!who) return null;
+    return { v: 1, ts, type: "activity", agentId: payload.agent_id, agent: who.agent, tool, detail: activityDetail(tool, payload.tool_input, projectDir) };
+  }
 
   if (hook === "SubagentStop") {
     const who = launch ? { agent: launch.agent, source: launch.source ?? "plugin" } : agentOf(payload.agent_type);
@@ -211,7 +248,7 @@ function main() {
   const projectDir = process.env.CLAUDE_PROJECT_DIR || payload.cwd;
   if (!projectDir) return;
   const journal = join(projectDir, ".claude", "pipeline-events.jsonl");
-  const options = { branch: currentBranch(projectDir) };
+  const options = { branch: currentBranch(projectDir), projectDir };
   if (payload.hook_event_name === "SubagentStop") {
     options.launch = payload.agent_id ? findLaunch(readTail(journal), payload.agent_id) : null;
     options.transcript = payload.agent_transcript_path ? readTail(payload.agent_transcript_path) : "";

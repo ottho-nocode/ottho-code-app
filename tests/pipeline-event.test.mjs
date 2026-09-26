@@ -175,3 +175,26 @@ test("SubagentStop : questions du rapport de remise, type vide (agents internes 
   assert.deepEqual([e.next, e.questions], ["architect", ["Faut-il un mode sombre ?"]]);
   assert.equal(buildEvent({ hook_event_name: "SubagentStop", agent_id: "i", agent_type: "", last_assistant_message: "Reading files" }, { now: NOW }), null);
 });
+
+const inner = (tool, input, over = {}) => ({
+  hook_event_name: "PreToolUse", tool_name: tool, tool_use_id: "toolu_in", tool_input: input,
+  agent_id: "a84e15673f59d08fc", agent_type: "ottho-code-app:designer", ...over,
+});
+
+test("activité d'un sous-agent : outil et détail court, chemins relatifs au projet", () => {
+  const opts = { now: NOW, projectDir: "/projet" };
+  assert.deepEqual(buildEvent(inner("Write", { file_path: "/projet/design/charte.md", content: "SECRET" }), opts), {
+    v: 1, ts: NOW.toISOString(), type: "activity", agentId: "a84e15673f59d08fc", agent: "designer", tool: "Write", detail: "design/charte.md",
+  });
+  assert.equal(buildEvent(inner("Read", { file_path: "/ailleurs/notes.md" }), opts).detail, "notes.md");
+  assert.equal(buildEvent(inner("Bash", { command: "curl -H 'Authorization: sk_live_x' …", description: "Installe les dépendances" }), opts).detail, "Installe les dépendances");
+  assert.equal(buildEvent(inner("Bash", { command: "npm test -- --token=abc" }), opts).detail, "npm");
+  assert.equal(buildEvent(inner("WebFetch", { url: "https://docs.example.com/a?key=1" }), opts).detail, "docs.example.com");
+  assert.equal(buildEvent(inner("Artifact", { action: "publish", url: "https://claude.ai/artifact/x" }), opts).detail, "publish");
+  assert.equal(buildEvent(inner("mcp__pencil__execute", { input: "…" }), opts).detail, "pencil · execute");
+  assert.equal(JSON.stringify(buildEvent(inner("Write", { file_path: "/projet/a.md", content: "SECRET" }), opts)).includes("SECRET"), false);
+});
+
+test("outil du fil principal (sans agent_id) : pas d'activité", () => {
+  assert.equal(buildEvent({ hook_event_name: "PreToolUse", tool_name: "Read", tool_input: { file_path: "/projet/x" } }, { now: NOW }), null);
+});
