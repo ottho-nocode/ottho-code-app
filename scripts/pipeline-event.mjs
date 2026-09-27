@@ -11,6 +11,8 @@
 //   reply : UserPromptSubmit, l'utilisateur a répondu (jamais le contenu de son message) ;
 //   wait  : Notification permission_prompt, Claude attend une autorisation ; ou PreToolUse
 //   AskUserQuestion, Claude pose des questions dans le terminal (kind « questions ») ;
+//   resume : PostToolUse d'un outil de la session principale après une demande d'autorisation
+//   (marqueur .claude/ottho-waiting) : l'autorisation est donnée, l'app retire la notification ;
 //   answered : PostToolUse AskUserQuestion, réponses données dans le sélecteur du terminal
 //   (question et réponse, pour que l'app ne les laisse pas « en attente »).
 // inApp : la session tourne dans le terminal intégré du pipeline (OTTHO_PIPELINE_TERMINAL=1).
@@ -18,7 +20,7 @@
 // « Questions pour toi » (10 au plus, 2 000 caractères chacune) et le compte rendu de
 // l'agent (8 000 caractères au plus, secrets reconnaissables masqués), consultables
 // dans l'historique du pipeline. Journal local, ignoré par Git. Jamais bloquant : sortie 0.
-import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, realpathSync } from "node:fs";
+import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, existsSync, rmSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { basename, isAbsolute, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -342,10 +344,18 @@ function main() {
     options.launch = payload.agent_id ? findLaunch(readTail(journal), payload.agent_id) : null;
     options.transcript = payload.agent_transcript_path ? readTail(payload.agent_transcript_path) : "";
   }
+  // Autorisation en attente (marqueur) puis outil exécuté dans la session principale : reprise.
+  const waiting = join(projectDir, ".claude", "ottho-waiting");
+  if (payload.hook_event_name === "PostToolUse" && !payload.agent_id && !["Agent", "Task", "AskUserQuestion"].includes(payload.tool_name) && existsSync(waiting)) {
+    rmSync(waiting, { force: true });
+    appendFileSync(journal, JSON.stringify({ v: 1, ts: new Date().toISOString(), type: "resume", agent: "claude", source: "session", session: payload.session_id ?? null }) + "\n");
+    return;
+  }
   const event = buildEvent(payload, options);
   if (!event) return;
   mkdirSync(join(projectDir, ".claude"), { recursive: true });
   appendFileSync(journal, JSON.stringify(event) + "\n");
+  if (event.type === "wait" && event.kind !== "questions") writeFileSync(waiting, event.ts);
 }
 
 const invoked = process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;

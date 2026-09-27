@@ -26,6 +26,8 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Corrigé
 
+- **Notification « Claude attend ton autorisation » qui restait affichée** : après une demande d'autorisation, le premier outil exécuté par la session principale journalise une reprise (`resume`, marqueur `.claude/ottho-waiting`).
+
 - **Le designer n'intervenait pas au démarrage d'un projet** : `project-bootstrap` et `/init-agency-project` passent en 5 étapes, avec `designer` (charte demandée d'abord, design system, maquettes des écrans clés) entre le PRD et l'architecture.
 - **Questions : un seul canal, le terminal** (plus de double réponse app / terminal). `PreToolUse` `AskUserQuestion` journalise les questions posées (Ottho Builder 2 ouvre le terminal) ; la méthode demande de consigner chaque réponse dans le livrable concerné.
 
