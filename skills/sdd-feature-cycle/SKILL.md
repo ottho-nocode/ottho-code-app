@@ -71,3 +71,7 @@ code-reviewer → tester                                       ← Phase Validat
    ↓
 doc-writer → /ship-feature                                   ← Post-Validate
 ```
+
+## Designer : au premier plan
+
+**Lance `designer` au premier plan, jamais en arrière-plan** (`run_in_background: false`) : il publie un canevas Claude Design (outil `Artifact`), ce qui demande l'autorisation de l'utilisateur, et le canevas s'ouvre alors dans son navigateur. En arrière-plan, la publication est refusée et il n'y a pas de maquettes visibles.

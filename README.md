@@ -213,7 +213,7 @@ Serveurs à clé — toujours via variables d'environnement, jamais de clé en c
 }
 ```
 
-Pour les maquettes locales, l'agent `designer` peut aussi utiliser le MCP **Pencil** : il est installé par l'application desktop [pencil.dev](https://pencil.dev), pas par ce plugin.
+Les maquettes se font dans **Claude Design** (outil `Artifact` de Claude Code) : l'agent `designer` y publie un canevas et en range une copie dans `design/projet/` ou `design/US-XX-<slug>/`, affichée par Ottho Builder 2. Pencil n'est plus utilisé.
 
 ---
 

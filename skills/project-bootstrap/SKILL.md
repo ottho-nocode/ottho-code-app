@@ -40,6 +40,8 @@ Invoquer `spec-writer` (niveau projet) :
 
 ### 3. Design initial — `designer`
 
+**Lance `designer` au premier plan, jamais en arrière-plan** (`run_in_background: false`) : il publie un canevas Claude Design (outil `Artifact`), ce qui demande l'autorisation de l'utilisateur, et le canevas s'ouvre alors dans son navigateur. En arrière-plan, la publication est refusée et il n'y a pas de maquettes visibles.
+
 **Dès que `spec-writer` a rendu le PRD**, invoquer `designer` (niveau projet) sans attendre : il pose ses questions (charte, maquettes existantes) pendant que l'utilisateur relit le PRD. Il passe **avant** l'architecture : la stack et le découpage en composants dépendent de l'interface. Il ne dessine qu'une fois le PRD et la charte validés.
 - Charte graphique `/design/charte.md` : il la **demande toujours d'abord** à l'utilisateur (couleurs, polices, logo, références) et s'arrête ; il n'en propose une que si l'utilisateur n'en a pas
 - Puis design system de base (tokens, typographie, composants atomiques) et maquettes des écrans clés du parcours principal du MVP (`/design/projet/`)

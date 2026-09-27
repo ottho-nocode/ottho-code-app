@@ -28,6 +28,8 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Corrigé
 
+- **Maquettes : Claude Design uniquement** (Pencil retiré de `designer` et `developer`). La session principale lance `designer` au premier plan : la publication du canevas demande l'autorisation de l'utilisateur, et le canevas s'ouvre dans son navigateur (en arrière-plan, elle était refusée). Consignes pour le niveau projet (canevas « <Projet> : écrans clés », copie dans `design/projet/`) ; sans `Artifact` ou publication refusée, canevas prêt à publier (`*.dc.html` + `canvas.json`) et demande de publication à la session principale, jamais de Pencil ni de page HTML unique.
+
 - **Après le PRD, spec-writer recommandait `architect`** (et le modèle de PRD aussi) : le designer était sauté. Il est désormais recommandé dès que le PRD est écrit (ou la spec d'une feature avec interface) : il demande ou propose la charte et les maquettes pendant la relecture du PRD ; `architect` vient ensuite.
 
 - **Le designer ne demandait jamais les maquettes existantes** : il les demande désormais avec la charte (liens Figma, Claude Design, Pencil, ou images et PDF déposés dans le pipeline) et part d'elles s'il y en a, au lieu de tout redessiner.

@@ -55,7 +55,7 @@ Le plugin packe une méthode agence éprouvée : **Spec-Driven Development à 2 
 
 ## MCP recommandés (non installés par défaut)
 
-`github`, `vercel`, `supabase`, `stripe`, `brevo`, `resend`, `notion`, `figma`, `pencil`, `context7`.
+`github`, `vercel`, `supabase`, `stripe`, `brevo`, `resend`, `notion`, `figma`, `context7`. Les maquettes se font dans Claude Design (outil `Artifact` de Claude Code). **Lance `designer` au premier plan, jamais en arrière-plan** (`run_in_background: false`) : il publie un canevas Claude Design (outil `Artifact`), ce qui demande l'autorisation de l'utilisateur, et le canevas s'ouvre alors dans son navigateur. En arrière-plan, la publication est refusée et il n'y a pas de maquettes visibles.
 
 Le plugin n'installe aucun serveur MCP : chaque projet ajoute les siens dans son `.mcp.json` à la racine (blocs prêts à copier dans le README). Les clés passent par les variables d'environnement du projet, jamais en clair dans le fichier.
 
