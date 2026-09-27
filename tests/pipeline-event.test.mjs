@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { buildEvent, findLaunch, handbackText, lastAssistantText, maskSecrets, questionsOf, textOf } from "../scripts/pipeline-event.mjs";
+import { buildEvent, findLaunch, handbackText, lastAssistantText, maskSecrets, questionsOf, sessionQuestionsOf, textOf } from "../scripts/pipeline-event.mjs";
 
 const NOW = new Date("2026-09-26T14:05:12.000Z");
 const pre = (over = {}) => ({
@@ -67,7 +67,7 @@ test("verdict ignoré pour les autres agents", () => {
 
 test("pas de sub-agent ou événement inconnu → null", () => {
   assert.equal(buildEvent({ hook_event_name: "PreToolUse", tool_input: { command: "ls" } }), null);
-  assert.equal(buildEvent({ hook_event_name: "Stop", tool_input: { subagent_type: "x" } }), null);
+  assert.equal(buildEvent({ hook_event_name: "SessionStart", tool_input: { subagent_type: "x" } }), null);
 });
 
 test("textOf parcourt objets et tableaux", () => {
@@ -211,4 +211,49 @@ test("activité d'un sous-agent : outil et détail court, chemins relatifs au pr
 
 test("outil du fil principal (sans agent_id) : pas d'activité", () => {
   assert.equal(buildEvent({ hook_event_name: "PreToolUse", tool_name: "Read", tool_input: { file_path: "/projet/x" } }, { now: NOW }), null);
+});
+
+// Session principale (terminal central) : questions de fin de tour, réponse, attente d'autorisation.
+const REAL_ASK = `Il va installer Playwright avec npm et télécharger Chromium, soit quelques centaines de Mo. C'est gratuit.
+
+Deux questions attendent toujours votre réponse :
+1. Je lance l'agent architect pour mettre à jour la règle de validateLabel au § 2 du plan ?
+2. Je commite specs/ et reviews/ ?`;
+
+test("sessionQuestionsOf : liste numérotée, bloc standard, dernière phrase interrogative ; sinon rien", () => {
+  assert.deepEqual(sessionQuestionsOf(REAL_ASK), [
+    "Je lance l'agent architect pour mettre à jour la règle de validateLabel au § 2 du plan ?",
+    "Je commite specs/ et reviews/ ?",
+  ]);
+  assert.deepEqual(sessionQuestionsOf("Plan écrit.\n\n**Questions pour toi :**\n- Stripe ou Paddle ?\n"), ["Stripe ou Paddle ?"]);
+  assert.deepEqual(sessionQuestionsOf("La spec est prête. Je lance le designer ?"), ["La spec est prête. Je lance le designer ?"]);
+  assert.deepEqual(sessionQuestionsOf("Tests verts, tout est commité."), []);
+  assert.deepEqual(sessionQuestionsOf("Pourquoi ? Parce que la RLS manquait.\n\nCorrigé."), []);
+});
+
+test("Stop : questions de la session principale, sa session, lancée ou non dans le terminal du pipeline", () => {
+  const stop = { hook_event_name: "Stop", session_id: "s1", last_assistant_message: REAL_ASK };
+  assert.deepEqual(buildEvent(stop, { now: NOW, inApp: true }), {
+    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "ask", agent: "claude", source: "session", session: "s1", inApp: true,
+    questions: [
+      "Je lance l'agent architect pour mettre à jour la règle de validateLabel au § 2 du plan ?",
+      "Je commite specs/ et reviews/ ?",
+    ],
+  });
+  // Fin de tour sans question : l'événement part quand même (les anciennes questions sont caduques).
+  assert.deepEqual(buildEvent({ ...stop, last_assistant_message: "C'est fait." }, { now: NOW }).questions, []);
+});
+
+test("UserPromptSubmit : réponse de l'utilisateur, sans le contenu du message", () => {
+  const e = buildEvent({ hook_event_name: "UserPromptSubmit", session_id: "s1", prompt: "1. oui 2. non, clé sk_live_ABCDEFGH123" }, { now: NOW });
+  assert.deepEqual(e, { v: 1, ts: "2026-09-26T14:05:12.000Z", type: "reply", agent: "claude", source: "session", session: "s1" });
+});
+
+test("Notification permission_prompt : Claude attend une autorisation ; autres notifications ignorées", () => {
+  const n = { hook_event_name: "Notification", session_id: "s1", notification_type: "permission_prompt", message: "Claude needs your permission to use Bash" };
+  assert.deepEqual(buildEvent(n, { now: NOW, inApp: false }), {
+    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "wait", agent: "claude", source: "session", session: "s1", inApp: false,
+    message: "Claude needs your permission to use Bash",
+  });
+  assert.equal(buildEvent({ ...n, notification_type: "idle_prompt" }, { now: NOW }), null);
 });

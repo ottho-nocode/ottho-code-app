@@ -6,6 +6,11 @@
 //   launch : PostToolUse d'un sub-agent lancé en arrière-plan (relie tool_use_id et agentId) ;
 //   end    : SubagentStop (vraie fin, réponse lue dans la transcription) ou PostToolUse synchrone ;
 //   activity : PreToolUse d'un outil appelé DANS un sous-agent (agent_id présent) : outil + détail court.
+// Session principale (le terminal central, qui orchestre les agents) :
+//   ask   : Stop, fin d'un tour ; questions posées à l'utilisateur (liste vide s'il n'y en a pas) ;
+//   reply : UserPromptSubmit, l'utilisateur a répondu (jamais le contenu de son message) ;
+//   wait  : Notification permission_prompt, Claude attend une autorisation.
+// inApp : la session tourne dans le terminal intégré du pipeline (OTTHO_PIPELINE_TERMINAL=1).
 // Pas de prompt ni de contenu de fichier. En fin d'exécution : les questions du bloc
 // « Questions pour toi » (10 au plus, 300 caractères chacune) et le compte rendu de
 // l'agent (8 000 caractères au plus, secrets reconnaissables masqués), consultables
@@ -89,6 +94,37 @@ export function questionsOf(text) {
     .map((q) => q.replace(/^\*+|\*+$/g, "").trim().slice(0, MAX_QUESTION_LENGTH))
     .filter(Boolean)
     .slice(0, MAX_QUESTIONS);
+}
+
+const cleanQuestions = (qs) =>
+  qs
+    .map((q) => maskSecrets(q.replace(/^\*+|\*+$/g, "").trim()).slice(0, MAX_QUESTION_LENGTH))
+    .filter(Boolean)
+    .slice(0, MAX_QUESTIONS);
+
+// Questions de la session principale à la fin d'un tour : bloc « Questions pour toi », sinon
+// liste (numérotée ou à puces) de questions dans la fin du message, sinon sa dernière phrase
+// si elle est interrogative.
+export function sessionQuestionsOf(text) {
+  if (typeof text !== "string" || !text.trim()) return [];
+  const block = questionsOf(text);
+  if (block.length) return cleanQuestions(block);
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-25);
+  const listed = lines.map((l) => /^(?:\d+[.)]|[-*•])\s+(.*\?)[*_\s]*$/.exec(l)?.[1]).filter(Boolean);
+  if (listed.length) return cleanQuestions(listed);
+  const last = lines.at(-1) ?? "";
+  return /\?[*_\s]*$/.test(last) && last.length <= 400 ? cleanQuestions([last]) : [];
+}
+
+function sessionEvent(payload, ts, inApp) {
+  const base = { v: 1, ts, agent: "claude", source: "session", session: payload.session_id ?? null };
+  const hook = payload.hook_event_name;
+  if (hook === "UserPromptSubmit") return { ...base, type: "reply" };
+  if (hook === "Stop") return { ...base, type: "ask", inApp, questions: sessionQuestionsOf(payload.last_assistant_message) };
+  if (hook === "Notification" && payload.notification_type === "permission_prompt") {
+    return { ...base, type: "wait", inApp, message: maskSecrets(String(payload.message ?? "")).slice(0, MAX_QUESTION_LENGTH) };
+  }
+  return null;
 }
 
 // Texte du dernier message de l'assistant dans une transcription JSONL de sub-agent.
@@ -191,9 +227,10 @@ export function activityDetail(tool, input = {}, projectDir = null) {
   return "";
 }
 
-export function buildEvent(payload, { now = new Date(), branch = null, transcript = "", launch = null, projectDir = null } = {}) {
+export function buildEvent(payload, { now = new Date(), branch = null, transcript = "", launch = null, projectDir = null, inApp = false } = {}) {
   const hook = payload?.hook_event_name;
   const ts = now.toISOString();
+  if (hook === "Stop" || hook === "UserPromptSubmit" || hook === "Notification") return sessionEvent(payload, ts, inApp);
 
   // Action d'un sous-agent en cours (les hooks de l'utilisateur s'exécutent aussi
   // dans les sous-agents, avec agent_id et agent_type).
@@ -273,7 +310,7 @@ function main() {
   const projectDir = process.env.CLAUDE_PROJECT_DIR || payload.cwd;
   if (!projectDir) return;
   const journal = join(projectDir, ".claude", "pipeline-events.jsonl");
-  const options = { branch: currentBranch(projectDir), projectDir };
+  const options = { branch: currentBranch(projectDir), projectDir, inApp: process.env.OTTHO_PIPELINE_TERMINAL === "1" };
   if (payload.hook_event_name === "SubagentStop") {
     options.launch = payload.agent_id ? findLaunch(readTail(journal), payload.agent_id) : null;
     options.transcript = payload.agent_transcript_path ? readTail(payload.agent_transcript_path) : "";
