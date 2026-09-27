@@ -9,7 +9,9 @@
 // Session principale (le terminal central, qui orchestre les agents) :
 //   ask   : Stop, fin d'un tour ; questions posées à l'utilisateur (liste vide s'il n'y en a pas) ;
 //   reply : UserPromptSubmit, l'utilisateur a répondu (jamais le contenu de son message) ;
-//   wait  : Notification permission_prompt, Claude attend une autorisation.
+//   wait  : Notification permission_prompt, Claude attend une autorisation ;
+//   answered : PostToolUse AskUserQuestion, réponses données dans le sélecteur du terminal
+//   (question et réponse, pour que l'app ne les laisse pas « en attente »).
 // inApp : la session tourne dans le terminal intégré du pipeline (OTTHO_PIPELINE_TERMINAL=1).
 // Pas de prompt ni de contenu de fichier. En fin d'exécution : les questions du bloc
 // « Questions pour toi » (10 au plus, 2 000 caractères chacune) et le compte rendu de
@@ -118,6 +120,17 @@ export function sessionQuestionsOf(text) {
   if (listed.length) return cleanQuestions(listed);
   const last = lines.at(-1) ?? "";
   return /\?[*_\s]*$/.test(last) && last.length <= 400 ? cleanQuestions([last]) : [];
+}
+
+// Réponses du sélecteur AskUserQuestion : { "question": "réponse" } dans l'entrée de l'outil
+// (remplie par Claude Code) ou dans sa réponse.
+export function askAnswers(payload) {
+  const source = payload?.tool_input?.answers ?? payload?.tool_response?.answers;
+  if (!source || typeof source !== "object") return [];
+  return Object.entries(source)
+    .filter(([q, a]) => q && a !== undefined && a !== null)
+    .map(([question, answer]) => ({ question: clipText(maskSecrets(String(question))), answer: clipText(maskSecrets(Array.isArray(answer) ? answer.join(", ") : String(answer))) }))
+    .slice(0, MAX_QUESTIONS);
 }
 
 function sessionEvent(payload, ts, inApp) {
@@ -235,6 +248,10 @@ export function buildEvent(payload, { now = new Date(), branch = null, transcrip
   const hook = payload?.hook_event_name;
   const ts = now.toISOString();
   if (hook === "Stop" || hook === "UserPromptSubmit" || hook === "Notification") return sessionEvent(payload, ts, inApp);
+  if (hook === "PostToolUse" && payload?.tool_name === "AskUserQuestion") {
+    const pairs = askAnswers(payload);
+    return pairs.length ? { v: 1, ts, type: "answered", agent: "claude", source: "terminal", session: payload.session_id ?? null, pairs } : null;
+  }
 
   // Action d'un sous-agent en cours (les hooks de l'utilisateur s'exécutent aussi
   // dans les sous-agents, avec agent_id et agent_type).

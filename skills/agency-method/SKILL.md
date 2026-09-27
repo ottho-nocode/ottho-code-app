@@ -79,3 +79,7 @@ Le plugin n'installe aucun serveur MCP : chaque projet ajoute les siens dans son
 - **Page Notion** si MCP `notion` configuré (briefs, décisions, deadlines).
 - **Sinon** : dossier `/docs/` du repo (PRD, architecture, devops, ADR).
 - Dans tous les cas, le code reste **dans Git** et la doc dans le repo (Notion est un miroir, pas l'inverse).
+
+## Questions déjà répondues (Ottho Builder 2)
+
+L'utilisateur peut répondre aux questions des agents dans Ottho Builder 2 : ses réponses sont consignées dans `docs/questions/*.md`, la section « Questions ouvertes » des specs ou de `docs/PRD.md` (case cochée suivie de « > Réponse (date) : … »). **Avant de lui poser une question, relis ces fichiers** et reprends ses réponses au lieu de les redemander. Le hook `answered-guard` refuse d'ailleurs toute question du sélecteur (`AskUserQuestion`) déjà répondue et te donne la réponse : ne repose alors que les questions restées sans réponse.

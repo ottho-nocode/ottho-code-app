@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { buildEvent, findLaunch, handbackText, lastAssistantText, maskSecrets, questionsOf, sessionQuestionsOf, textOf } from "../scripts/pipeline-event.mjs";
+import { askAnswers, buildEvent, findLaunch, handbackText, lastAssistantText, maskSecrets, questionsOf, sessionQuestionsOf, textOf } from "../scripts/pipeline-event.mjs";
 
 const NOW = new Date("2026-09-26T14:05:12.000Z");
 const pre = (over = {}) => ({
@@ -266,4 +266,18 @@ test("Notification permission_prompt : Claude attend une autorisation ; autres n
     message: "Claude needs your permission to use Bash",
   });
   assert.equal(buildEvent({ ...n, notification_type: "idle_prompt" }, { now: NOW }), null);
+});
+
+test("PostToolUse AskUserQuestion : réponses du sélecteur du terminal journalisées (answered)", () => {
+  const payload = {
+    hook_event_name: "PostToolUse", tool_name: "AskUserQuestion", session_id: "s1",
+    tool_input: { questions: [{ question: "Quel modèle économique ?" }], answers: { "Quel modèle économique ?": "Abonnement fixe", "Quelle cible ?": ["Coiffeuses solo", "Barbiers"] } },
+    tool_response: "ok",
+  };
+  assert.deepEqual(buildEvent(payload, { now: NOW }), {
+    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "answered", agent: "claude", source: "terminal", session: "s1",
+    pairs: [{ question: "Quel modèle économique ?", answer: "Abonnement fixe" }, { question: "Quelle cible ?", answer: "Coiffeuses solo, Barbiers" }],
+  });
+  assert.deepEqual(askAnswers({ tool_input: {} }), []);
+  assert.equal(buildEvent({ ...payload, tool_input: { questions: [] } }, { now: NOW }), null);
 });

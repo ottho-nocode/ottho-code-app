@@ -26,6 +26,8 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Corrigé
 
+- **Questions reposées dans le terminal alors que l'utilisateur y avait répondu dans Ottho Builder 2** : nouveau hook `PreToolUse` `AskUserQuestion` (`scripts/answered-guard.mjs`) qui lit les réponses consignées (`docs/questions/*.md`, specs, PRD), refuse les questions déjà répondues et donne les réponses à Claude ; il ne repose que les autres. Dans l'autre sens, `PostToolUse` `AskUserQuestion` journalise les réponses données dans le sélecteur (événement `answered`) pour que l'app ne les laisse pas en attente. Consigne ajoutée au skill `agency-method`.
+
 - **Questions coupées à 300 caractères** : une question longue (avec sa recommandation) arrivait tronquée dans le pipeline. Limite portée à 2 000 caractères, coupe sur un mot entier avec « … » au-delà ; une question numérotée suivie d'une recommandation est reconnue.
 
 - **Les agents peuvent enfin utiliser les MCP que leurs consignes citent.** La ligne `tools:` d'un sous-agent est une liste fermée : devops, developer, architect, spec-writer, doc-writer et brainstorming parlaient de GitHub, Vercel, Supabase, Context7 ou Notion sans y avoir accès. Chaque agent reçoit désormais les services de son métier, par serveur entier (`mcp__supabase`) et sous le nom du connecteur claude.ai (`mcp__claude_ai_Supabase`). security-auditor ne dépend plus du nom exact du serveur Supabase.
