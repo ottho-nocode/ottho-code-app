@@ -14,6 +14,12 @@ Quand l'utilisateur demande à **démarrer un nouveau projet** / **init projet**
 
 ## Étapes
 
+### 0. Brief
+
+Si `docs/brief.md` existe (onboarding d'ottho-pipeline), annonce-le et transmets-le à `brainstorming` : il en part et ne pose que les questions qui manquent. Sinon, `brainstorming` construit le cadrage par questions.
+
+**Validations dans ottho-pipeline** : l'utilisateur peut valider le PRD et l'architecture dans l'app (entrée « Validé par l'utilisateur (ottho-pipeline) » dans leur « Historique »). Un message du type « Le PRD est validé dans le pipeline » vaut validation : passe à l'étape suivante.
+
 ### 1. Cadrage initial — `brainstorming`
 
 Invoquer `brainstorming` (niveau projet) :
@@ -39,6 +45,7 @@ Invoquer `architect` (niveau projet) :
 - Schéma BDD de base (tables, relations, **RLS obligatoire**)
 - Conventions de code et de commits
 - Génère `CLAUDE.md` à la racine du projet à partir de `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.md.template`
+- Rédige `/docs/architecture.md` (stack, schéma, conventions), terminé par une section `## Historique` : c'est le livrable que l'utilisateur valide
 - Initialise l'arborescence : `/docs/`, `/specs/`, `/plans/`, `/docs/adr/`
 
 **STOP** — validation humaine.

@@ -124,3 +124,9 @@ Comment on sait que le produit fonctionne :
 ## 9. Prochaine étape
 
 → Invoquer `architect` pour définir la stack, le schéma BDD initial, et les conventions de code.
+
+---
+
+## Historique
+
+- {{DATE}} — Création par `spec-writer`.

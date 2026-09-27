@@ -22,6 +22,8 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 - **Questions du terminal central dans le pipeline** : hooks `Stop` (questions de fin de tour de la session principale : bloc « Questions pour toi », liste de questions ou dernière phrase interrogative), `UserPromptSubmit` (l'utilisateur a répondu, sans le contenu de son message) et `Notification` `permission_prompt` (Claude attend une autorisation). L'app les affiche en notification et peut envoyer la réponse au terminal intégré.
 
+- **Brief du projet** : `brainstorming` part de `docs/brief.md` (onboarding d'ottho-pipeline) et ne pose que les questions qui manquent ; `spec-writer` s'en sert pour le PRD ; `project-bootstrap` le transmet, fait écrire `docs/architecture.md` et accepte la validation du PRD et de l'architecture faite dans le pipeline. Le modèle de PRD a une section « Historique ».
+
 ### Corrigé
 
 - **Les agents peuvent enfin utiliser les MCP que leurs consignes citent.** La ligne `tools:` d'un sous-agent est une liste fermée : devops, developer, architect, spec-writer, doc-writer et brainstorming parlaient de GitHub, Vercel, Supabase, Context7 ou Notion sans y avoir accès. Chaque agent reçoit désormais les services de son métier, par serveur entier (`mcp__supabase`) et sous le nom du connecteur claude.ai (`mcp__claude_ai_Supabase`). security-auditor ne dépend plus du nom exact du serveur Supabase.
