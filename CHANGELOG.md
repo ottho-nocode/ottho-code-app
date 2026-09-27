@@ -26,6 +26,8 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Corrigé
 
+- **Le designer ne demandait jamais les maquettes existantes** : il les demande désormais avec la charte (liens Figma, Claude Design, Pencil, ou images et PDF déposés dans le pipeline) et part d'elles s'il y en a, au lieu de tout redessiner.
+
 - **Notification « Claude attend ton autorisation » qui restait affichée** : après une demande d'autorisation, le premier outil exécuté par la session principale journalise une reprise (`resume`, marqueur `.claude/ottho-waiting`).
 
 - **Le designer n'intervenait pas au démarrage d'un projet** : `project-bootstrap` et `/init-agency-project` passent en 5 étapes, avec `designer` (charte demandée d'abord, design system, maquettes des écrans clés) entre le PRD et l'architecture.

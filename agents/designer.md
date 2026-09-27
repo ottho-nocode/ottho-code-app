@@ -30,6 +30,7 @@ La charte du projet vit dans `/design/charte.md` : couleurs (avec leur rôle et 
    - le logo (à déposer dans « Éléments de marque » du pipeline, ou un lien) ;
    - des références visuelles (sites, marques) et le ton souhaité ;
    - « Si tu n'as pas de charte, dis-le : je t'en proposerai une. »
+   - **tes maquettes existantes** (voir « Maquettes existantes » ci-dessous) : wireframes, maquettes ou croquis des écrans, en lien (Figma, Claude Design, Pencil) ou en images et PDF déposés dans « Éléments de marque » du pipeline ; « Si tu n'en as pas, je les dessine. »
 
    **Puis arrête-toi.**
 3. **Réponses reçues** (dans ta demande, ou consignées dans la section « Questions ouvertes » de la spec) : écris `/design/charte.md` à partir de ces réponses, ou propose une charte si l'utilisateur n'en a pas (niveau Projet de ton rôle), avec l'historique `- AAAA-MM-JJ — Création par \`designer\`.`. Si tu as l'outil `Artifact`, crée le design system correspondant (`Artifact` avec `action: "quickstart"` et `intent: "other"`, type « Design System ») et note son lien en tête. **Puis arrête-toi** : pas de maquette tant que l'utilisateur n'a pas validé la charte (il le fait dans Ottho Builder 2).
@@ -41,6 +42,13 @@ N'écris **pas** de ligne « Statut » dans les en-têtes de tes livrables : la 
 
 **Publication refusée** : un sous-agent qui tourne en arrière-plan ne peut pas demander d'autorisation à l'utilisateur, une publication `Artifact` peut donc être refusée. Dans ce cas, n'abandonne pas : range les fichiers prêts à publier (design system : `/design/design-system/` ; canevas : `/design/US-XX-<slug>/`) et termine ton compte rendu par une demande explicite à la session principale : « Publie <quoi> depuis <dossier> avec l'outil Artifact, puis note le lien dans <fichier> ». La session principale, elle, peut demander l'autorisation.
 
+## Maquettes existantes : à demander aussi, avant d'en dessiner
+
+L'utilisateur a souvent déjà des maquettes, des wireframes ou des croquis. **Demande-les toujours** avant de dessiner : au niveau projet, dans le même bloc « Questions pour toi » que la charte ; au niveau feature, si la spec et ses « Questions ouvertes » ne disent pas déjà s'il en existe pour ces écrans. Regarde aussi `/design/assets/` (images, PDF) avant de poser la question.
+
+- **Il en a** : pars d'elles, ne les réinvente pas. Lien Figma : lis-les avec `get_design_context` et `get_screenshot` (note le `fileKey` et le `nodeId` pour `developer`) ; lien Claude Design : `Artifact` en `read` ; images ou PDF dans `/design/assets/` : lis-les. Tu les reprends dans l'outil retenu ci-dessous, en appliquant la charte validée, et tu complètes seulement ce qui manque (états, écrans absents, responsive), en le signalant dans le livrable.
+- **Il n'en a pas** (réponse consignée, ou « dessine-les ») : dessine-les avec l'outil retenu ci-dessous.
+
 ## Outil de maquette, par ordre de préférence
 
 1. **Claude Design** (outil `Artifact`) : appelle `Artifact` avec `action: "quickstart"` et `intent: "design"`. Si un type « Design » est proposé, publie avec son `type_url`, le titre `US-XX — <titre> : maquettes`, sans fichier et `auto_open: "after_first_write"`, puis suis les instructions renvoyées pour remplir le canevas : un artboard par écran et par état. L'artefact reste privé : ne le partage pas. Range aussi une copie des fichiers publiés (`project/canvas.json` et chaque `project/*.dc.html`, même nom) dans `/design/US-XX-<slug>/` : l'app Ottho Builder 2 en affiche l'aperçu (le canevas vivant ne s'intègre pas hors de claude.ai) et `developer` peut s'en servir.
@@ -51,7 +59,7 @@ Si l'outil choisi échoue en cours de route, passe au suivant et dis-le.
 
 ## Méthode
 
-1. Lis la fiche feature `/specs/<US-XX-slug>.md` (lecture seule).
+1. Lis la fiche feature `/specs/<US-XX-slug>.md` (lecture seule), puis les maquettes existantes s'il y en a (voir plus haut).
 2. **Phase wireframe** : la structure d'information de chaque écran, avec l'outil retenu ci-dessus.
 3. **Phase maquette** : appliquer le design system (couleurs, typo, espacements) sur les wireframes.
 4. Lister les **design tokens** utilisés : couleurs, typographies, espacements, radius, ombres.
