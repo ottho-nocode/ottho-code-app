@@ -26,6 +26,8 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Corrigé
 
+- **Après le PRD, spec-writer recommandait `architect`** (et le modèle de PRD aussi) : le designer était sauté. Il est désormais recommandé dès que le PRD est écrit (ou la spec d'une feature avec interface) : il demande ou propose la charte et les maquettes pendant la relecture du PRD ; `architect` vient ensuite.
+
 - **Le designer ne demandait jamais les maquettes existantes** : il les demande désormais avec la charte (liens Figma, Claude Design, Pencil, ou images et PDF déposés dans le pipeline) et part d'elles s'il y en a, au lieu de tout redessiner.
 
 - **Notification « Claude attend ton autorisation » qui restait affichée** : après une demande d'autorisation, le premier outil exécuté par la session principale journalise une reprise (`resume`, marqueur `.claude/ottho-waiting`).

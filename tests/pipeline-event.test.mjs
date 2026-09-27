@@ -289,3 +289,9 @@ test("PreToolUse AskUserQuestion (session principale) : Claude pose des question
     kind: "questions", message: "2 questions dans le terminal", questions: ["Quelle cible ?", "Quel modèle ?"],
   });
 });
+
+test("fin spec-writer (PRD) : designer recommandé juste après, même si architect est cité ensuite", () => {
+  const text = "PRD écrit.\n\n> **Prochaine étape recommandée** : invoquer `designer`, qui demande (ou propose) la charte graphique et les maquettes pendant que l'utilisateur relit le PRD ; `architect` vient après la charte et les maquettes.";
+  const e = buildEvent(post("spec-writer", text), { now: NOW });
+  assert.equal(e.next, "designer");
+});

@@ -69,10 +69,12 @@ Une question par puce, 10 au plus. Pas de question : pas de bloc. Avant de repos
 À la fin de ta réponse, recommande explicitement l'agent suivant, sur une ligne au format standard :
 
 - Si la feature a une dimension UI/UX :
-  > **Prochaine étape recommandée** : invoquer `designer` pour produire wireframes et maquettes.
+  > **Prochaine étape recommandée** : invoquer `designer`, qui demande (ou propose) la charte graphique et les maquettes existantes, puis produit wireframes et maquettes.
 - Si la feature est purement backend ou très simple :
   > **Prochaine étape recommandée** : invoquer `architect` pour le plan technique directement.
-- Niveau projet (PRD global) :
+- Niveau projet (PRD global), dès que le PRD est écrit, si le projet a une interface (le cas général) :
+  > **Prochaine étape recommandée** : invoquer `designer`, qui demande (ou propose) la charte graphique et les maquettes pendant que l'utilisateur relit le PRD ; `architect` vient après la charte et les maquettes.
+- Niveau projet sans aucune interface (API, script) :
   > **Prochaine étape recommandée** : invoquer `architect` pour définir la stack et l'archi initiale.
 
 N'invoque pas l'agent suivant.
