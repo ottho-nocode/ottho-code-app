@@ -70,3 +70,4 @@ Desktop.ini
 
 # Ottho Builder 2 (journal local des sub-agents)
 .claude/pipeline-events.jsonl
+.claude/ottho-answers-seen.json

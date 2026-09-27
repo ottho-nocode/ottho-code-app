@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { answeredPairs, decide, guard, similar } from "../scripts/answered-guard.mjs";
+import { answeredPairs, decide, guard, newAnswersContext, similar } from "../scripts/answered-guard.mjs";
 
 // Format écrit par Ottho Builder 2 (docs/questions/*.md, section « Questions ouvertes » des specs).
 const FILE = `# Questions du projet
@@ -66,4 +66,20 @@ test("script : lit le message du hook sur l'entrée standard et répond en JSON"
   const script = new URL("../scripts/answered-guard.mjs", import.meta.url).pathname;
   const out = JSON.parse(execFileSync(process.execPath, [script], { input, env: { ...process.env, CLAUDE_PROJECT_DIR: dir } }).toString());
   assert.equal(out.hookSpecificOutput.permissionDecision, "deny");
+});
+
+test("UserPromptSubmit : les réponses données dans l'app depuis le dernier message passent dans le contexte, une seule fois", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "guard-"));
+  await mkdir(join(dir, "docs"), { recursive: true });
+  const prd = "# PRD\n\n## 8. Questions ouvertes\n\n- [x] Confirmes-tu le retrait de l'IA du MVP ?\n  > Réponse (2026-09-27) : ok\n";
+  await writeFile(join(dir, "docs", "PRD.md"), prd);
+  const first = await newAnswersContext(dir);
+  assert.equal(first.hookSpecificOutput.hookEventName, "UserPromptSubmit");
+  assert.match(first.hookSpecificOutput.additionalContext, /priment sur toute hypothèse/);
+  assert.match(first.hookSpecificOutput.additionalContext, /retrait de l'IA du MVP \? → ok/);
+  assert.equal(await newAnswersContext(dir), null); // déjà transmise
+  await writeFile(join(dir, "docs", "PRD.md"), `${prd}- [x] Comment gérer une contestation ?\n  > Réponse (2026-09-27) : annulation dans l'app, au-delà de 24 h avant\n`);
+  const next = await newAnswersContext(dir);
+  assert.match(next.hookSpecificOutput.additionalContext, /contestation \? → annulation dans l'app/);
+  assert.doesNotMatch(next.hookSpecificOutput.additionalContext, /retrait de l'IA/);
 });

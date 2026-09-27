@@ -26,6 +26,8 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Corrigé
 
+- **Réponses données dans Ottho Builder 2 ignorées par la session principale** (elle lançait l'agent suivant avec ses propres hypothèses) : à chaque message de l'utilisateur, `answered-guard` ajoute au contexte les réponses consignées depuis le dernier tour, qui priment sur toute hypothèse. Chaque agent fait primer les réponses consignées sur les hypothèses de sa demande et signale les contradictions.
+
 - **Questions reposées dans le terminal alors que l'utilisateur y avait répondu dans Ottho Builder 2** : nouveau hook `PreToolUse` `AskUserQuestion` (`scripts/answered-guard.mjs`) qui lit les réponses consignées (`docs/questions/*.md`, specs, PRD), refuse les questions déjà répondues et donne les réponses à Claude ; il ne repose que les autres. Dans l'autre sens, `PostToolUse` `AskUserQuestion` journalise les réponses données dans le sélecteur (événement `answered`) pour que l'app ne les laisse pas en attente. Consigne ajoutée au skill `agency-method`.
 
 - **Questions coupées à 300 caractères** : une question longue (avec sa recommandation) arrivait tronquée dans le pipeline. Limite portée à 2 000 caractères, coupe sur un mot entier avec « … » au-delà ; une question numérotée suivie d'une recommandation est reconnue.

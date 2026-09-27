@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// Hook PreToolUse (AskUserQuestion) du plugin ottho-code-app. Quand Claude s'apprête à poser
-// des questions à l'utilisateur dans le terminal, il vérifie si l'utilisateur y a déjà répondu
+// Pont des réponses du plugin ottho-code-app : l'utilisateur répond aux questions des agents
 // dans Ottho Builder 2 (réponses consignées dans docs/questions/*.md, specs/*.md ou
-// docs/PRD.md, section « Questions ouvertes ») : si oui, la question est refusée et Claude
-// reçoit les réponses, pour ne reposer que les questions restées sans réponse.
+// docs/PRD.md, section « Questions ouvertes »), Claude doit les voir.
+//   PreToolUse AskUserQuestion : question déjà répondue refusée, la réponse est donnée à Claude.
+//   UserPromptSubmit : les réponses données depuis le dernier message sont ajoutées au contexte
+//   (elles priment sur toute hypothèse). Déjà transmises : .claude/ottho-answers-seen.json.
 // Jamais bloquant sur une erreur : sortie 0 sans rien écrire.
-import { readFileSync, realpathSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { readFile as readFileAsync, readdir as readdirAsync } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -89,11 +91,46 @@ export async function guard(payload, projectDir) {
   return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } };
 }
 
+async function allPairs(projectDir) {
+  const pairs = [];
+  for (const file of await answerFiles(projectDir)) {
+    const text = await readFileAsync(join(projectDir, file), "utf8").catch(() => null);
+    if (text) pairs.push(...answeredPairs(text).map((p) => ({ ...p, file })));
+  }
+  return pairs;
+}
+
+const keyOf = (p) => createHash("sha1").update(`${p.question}\n${p.answer}`).digest("hex").slice(0, 16);
+
+// Réponses consignées depuis le dernier message de l'utilisateur : ajoutées au contexte de Claude.
+export async function newAnswersContext(projectDir) {
+  const statePath = join(projectDir, ".claude", "ottho-answers-seen.json");
+  let seen = [];
+  try {
+    seen = JSON.parse(readFileSync(statePath, "utf8"));
+  } catch {
+    // premier passage
+  }
+  const known = new Set(Array.isArray(seen) ? seen : []);
+  const pairs = await allPairs(projectDir);
+  const fresh = pairs.filter((p) => !known.has(keyOf(p)));
+  if (!pairs.length) return null;
+  mkdirSync(join(projectDir, ".claude"), { recursive: true });
+  writeFileSync(statePath, JSON.stringify(pairs.map(keyOf)));
+  if (!fresh.length) return null;
+  const files = [...new Set(fresh.map((p) => p.file))].join(", ");
+  const context = [
+    `Réponses de l'utilisateur consignées dans Ottho Builder 2 depuis son dernier message (${files}). Elles priment sur toute hypothèse : ne les remplace pas, transmets-les aux agents concernés et ne repose pas ces questions.`,
+    ...fresh.map((p) => `- ${p.question} → ${p.answer}`),
+  ].join("\n");
+  return { hookSpecificOutput: { hookEventName: "UserPromptSubmit", additionalContext: context } };
+}
+
 async function main() {
   const payload = JSON.parse(readFileSync(0, "utf8"));
   const projectDir = process.env.CLAUDE_PROJECT_DIR || payload.cwd;
   if (!projectDir) return;
-  const out = await guard(payload, projectDir);
+  const out = payload.hook_event_name === "UserPromptSubmit" ? await newAnswersContext(projectDir) : await guard(payload, projectDir);
   if (out) process.stdout.write(JSON.stringify(out));
 }
 

@@ -76,6 +76,8 @@ Déroule les cinq fronts dans cet ordre. Pour chaque constat, note la gravité (
 
 ## Questions pour l'utilisateur
 
+Les réponses de l'utilisateur déjà consignées (section « Questions ouvertes » des livrables, `docs/questions/`) **priment sur les hypothèses de ta demande** : ne repose jamais une question qui y a une réponse, applique la réponse, et signale toute contradiction entre ta demande et une réponse consignée.
+
 Si tu as besoin d'une réponse de l'utilisateur pour avancer, termine ta réponse, juste avant le passage de main, par un bloc :
 
 Questions pour toi :
