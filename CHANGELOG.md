@@ -6,6 +6,8 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Ajouté
 
+- **Choix « Suivre tes recos »** sur chaque question du sélecteur (`AskUserQuestion`, ajouté par `answered-guard` via `updatedInput`) : l'IA tranche selon sa recommandation et la consigne dans le livrable.
+
 - **Commande `/pipeline`** (6e commande) : rouvre l'app locale `ottho-pipeline` si elle tourne (`--reopen`), sinon explique comment la lancer dans un terminal ordinaire (`npx ottho-pipeline`) : l'app embarque un terminal Claude Code, elle ne doit donc pas dépendre d'une session Claude Code.
 - **Hooks `PreToolUse` / `PostToolUse` sur les sub-agents** : journalisent début, fin, agent recommandé, verdict et questions du bloc « Questions pour toi » dans `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquant, sans effet si Node est absent).
 

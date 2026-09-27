@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { answeredPairs, decide, guard, newAnswersContext, similar } from "../scripts/answered-guard.mjs";
+import { FOLLOW_RECO, answeredPairs, decide, guard, newAnswersContext, similar, withFollowReco } from "../scripts/answered-guard.mjs";
 
 // Format écrit par Ottho Builder 2 (docs/questions/*.md, section « Questions ouvertes » des specs).
 const FILE = `# Questions du projet
@@ -53,7 +53,10 @@ test("guard : AskUserQuestion sur des questions déjà répondues dans l'app →
   assert.match(reason, /→ abonnement fixe/);
   assert.match(reason, /docs\/questions\/projet\.md/);
 
-  assert.equal(await guard(payload(["Quel nom de domaine veux-tu réserver ?"]), dir), null);
+  // Question sans réponse : elle passe, avec le choix « Suivre tes recos » en plus.
+  const reco = await guard(payload(["Quel nom de domaine veux-tu réserver ?"]), dir);
+  assert.equal(reco.hookSpecificOutput.permissionDecision, undefined);
+  assert.deepEqual(reco.hookSpecificOutput.updatedInput.questions[0].options, [FOLLOW_RECO]);
   assert.equal(await guard({ ...payload([]), tool_name: "Bash" }, dir), null);
 });
 
@@ -82,4 +85,19 @@ test("UserPromptSubmit : les réponses données dans l'app depuis le dernier mes
   const next = await newAnswersContext(dir);
   assert.match(next.hookSpecificOutput.additionalContext, /contestation \? → annulation dans l'app/);
   assert.doesNotMatch(next.hookSpecificOutput.additionalContext, /retrait de l'IA/);
+});
+
+test("withFollowReco : « Suivre tes recos » ajouté à chaque question, sauf si elle a déjà 4 choix ou une reco", () => {
+  const input = {
+    questions: [
+      { question: "Stripe ou Paddle ?", header: "PSP", multiSelect: false, options: [{ label: "Stripe", description: "a" }, { label: "Paddle", description: "b" }] },
+      { question: "Couleur ?", header: "Couleur", multiSelect: false, options: [1, 2, 3, 4].map((n) => ({ label: `C${n}`, description: "" })) },
+      { question: "Cible ?", header: "Cible", multiSelect: false, options: [{ label: "Solo", description: "" }, { label: "Suivre ta reco", description: "" }] },
+    ],
+  };
+  const out = withFollowReco(input);
+  assert.deepEqual(out.questions[0].options.map((o) => o.label), ["Stripe", "Paddle", "Suivre tes recos"]);
+  assert.equal(out.questions[1].options.length, 4);
+  assert.equal(out.questions[2].options.length, 2);
+  assert.equal(withFollowReco({ questions: [input.questions[1]] }), null);
 });

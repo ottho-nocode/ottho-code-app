@@ -2,7 +2,8 @@
 // Pont des réponses du plugin ottho-code-app : l'utilisateur répond aux questions des agents
 // dans Ottho Builder 2 (réponses consignées dans docs/questions/*.md, specs/*.md ou
 // docs/PRD.md, section « Questions ouvertes »), Claude doit les voir.
-//   PreToolUse AskUserQuestion : question déjà répondue refusée, la réponse est donnée à Claude.
+//   PreToolUse AskUserQuestion : question déjà répondue refusée, la réponse est donnée à Claude ;
+//   sinon, chaque question reçoit le choix « Suivre tes recos » (l'IA décide selon sa recommandation).
 //   UserPromptSubmit : les réponses données depuis le dernier message sont ajoutées au contexte
 //   (elles priment sur toute hypothèse). Déjà transmises : .claude/ottho-answers-seen.json.
 // Jamais bloquant sur une erreur : sortie 0 sans rien écrire.
@@ -68,6 +69,22 @@ async function answerFiles(projectDir) {
   return [...(await list("docs/questions")), ...(await list("specs")), "docs/PRD.md"];
 }
 
+// Choix ajouté à chaque question du sélecteur : laisser Claude trancher selon sa recommandation.
+export const FOLLOW_RECO = { label: "Suivre tes recos", description: "Laisse l'IA choisir selon sa recommandation (elle la consigne dans le livrable)" };
+const MAX_OPTIONS = 4; // limite du sélecteur AskUserQuestion
+
+export function withFollowReco(input) {
+  const questions = Array.isArray(input?.questions) ? input.questions : [];
+  let changed = false;
+  const next = questions.map((q) => {
+    const options = Array.isArray(q?.options) ? q.options : [];
+    if (options.length >= MAX_OPTIONS || options.some((o) => /reco/i.test(o?.label ?? ""))) return q;
+    changed = true;
+    return { ...q, options: [...options, FOLLOW_RECO] };
+  });
+  return changed ? { ...input, questions: next } : null;
+}
+
 export async function guard(payload, projectDir) {
   if (payload?.tool_name !== "AskUserQuestion") return null;
   const asked = (payload.tool_input?.questions ?? []).map((q) => q?.question).filter((q) => typeof q === "string" && q.trim());
@@ -82,7 +99,10 @@ export async function guard(payload, projectDir) {
     pairs.push(...found);
   }
   const { matched, unmatched } = decide(asked, pairs);
-  if (!matched.length) return null;
+  if (!matched.length) {
+    const updatedInput = withFollowReco(payload.tool_input);
+    return updatedInput ? { hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput } } : null;
+  }
   const reason = [
     `L'utilisateur a déjà répondu dans Ottho Builder 2 (${[...sources].join(", ")}). Utilise ces réponses et ne repose pas ces questions :`,
     ...matched.map((m) => `- ${m.asked} → ${m.answer}`),
