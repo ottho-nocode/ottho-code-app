@@ -99,12 +99,22 @@ test("maskSecrets : clés d'API, jetons, clés privées ; texte ordinaire intact
   assert.match(out, /texte normal : re_trouver/);
 });
 
-test("questionsOf : dernier bloc seulement, 10 au plus, 300 caractères au plus, rien sans bloc", () => {
+test("questionsOf : dernier bloc seulement, 10 au plus, rien sans bloc ; une longue question reste entière", () => {
   const many = Array.from({ length: 12 }, (_, i) => `- Q${i} ${"x".repeat(400)} ?`).join("\n");
   const out = questionsOf(`Questions pour toi :\n- ancienne ?\n\nSuite.\n\nQuestions pour toi :\n${many}\n`);
   assert.equal(out.length, 10);
-  assert.ok(out.every((q) => q.length <= 300 && q.startsWith("Q")));
+  assert.ok(out.every((q) => q.length > 400 && q.startsWith("Q") && q.endsWith("?")));
   assert.deepEqual(questionsOf("Aucune question ici ?"), []);
+});
+
+test("questions très longues : coupées sur un mot au-delà de 2 000 caractères, avec « … »", () => {
+  const long = `Quelle cible retiens-tu ${"pour le MVP ".repeat(250)}?`;
+  const [q] = questionsOf(`Questions pour toi :\n- ${long}\n`);
+  assert.ok(q.length <= 2000 && q.endsWith("…") && !q.endsWith(" …"));
+  const real = "Quelle cible retiens-tu pour le MVP : coiffeuses solo uniquement (moins de 100k), ou indépendants beauté sur RDV (coiffure, barbiers, esthétique) pour repasser au-dessus de 100k ? Ma recommandation par défaut : MVP sur les coiffeuses solo, avec l'élargissement documenté comme cible de marché dans le PRD.";
+  assert.deepEqual(sessionQuestionsOf(`Deux points :\n1. ${real}\n2. On continue ?`), [real, "On continue ?"]);
+  // Le « ? » d'une adresse web ne fait pas une question.
+  assert.deepEqual(sessionQuestionsOf("Sources :\n- https://exemple.com/?page=2\n- La doc Supabase"), []);
 });
 
 const fx = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url)));

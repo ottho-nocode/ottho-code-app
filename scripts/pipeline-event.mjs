@@ -12,7 +12,7 @@
 //   wait  : Notification permission_prompt, Claude attend une autorisation.
 // inApp : la session tourne dans le terminal intégré du pipeline (OTTHO_PIPELINE_TERMINAL=1).
 // Pas de prompt ni de contenu de fichier. En fin d'exécution : les questions du bloc
-// « Questions pour toi » (10 au plus, 300 caractères chacune) et le compte rendu de
+// « Questions pour toi » (10 au plus, 2 000 caractères chacune) et le compte rendu de
 // l'agent (8 000 caractères au plus, secrets reconnaissables masqués), consultables
 // dans l'historique du pipeline. Journal local, ignoré par Git. Jamais bloquant : sortie 0.
 import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, realpathSync } from "node:fs";
@@ -48,7 +48,9 @@ const reportOf = (text) => {
   const clean = maskSecrets(text.trim());
   return clean.length > MAX_REPORT ? `${clean.slice(0, MAX_REPORT)}…` : clean;
 };
-const MAX_QUESTION_LENGTH = 300;
+const MAX_QUESTION_LENGTH = 2000;
+// Au-delà de max : coupé sur le dernier mot entier, suivi de « … » (on voit qu'il y a une suite).
+export const clipText = (text, max = MAX_QUESTION_LENGTH) => (text.length <= max ? text : `${text.slice(0, max - 1).replace(/\s+\S*$/, "")}…`);
 
 const usKey = (text) => {
   const m = US_RE.exec(text ?? "");
@@ -91,14 +93,14 @@ export function questionsOf(text) {
     else break;
   }
   return questions
-    .map((q) => q.replace(/^\*+|\*+$/g, "").trim().slice(0, MAX_QUESTION_LENGTH))
+    .map((q) => clipText(q.replace(/^\*+|\*+$/g, "").trim()))
     .filter(Boolean)
     .slice(0, MAX_QUESTIONS);
 }
 
 const cleanQuestions = (qs) =>
   qs
-    .map((q) => maskSecrets(q.replace(/^\*+|\*+$/g, "").trim()).slice(0, MAX_QUESTION_LENGTH))
+    .map((q) => clipText(maskSecrets(q.replace(/^\*+|\*+$/g, "").trim())))
     .filter(Boolean)
     .slice(0, MAX_QUESTIONS);
 
@@ -110,7 +112,9 @@ export function sessionQuestionsOf(text) {
   const block = questionsOf(text);
   if (block.length) return cleanQuestions(block);
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-25);
-  const listed = lines.map((l) => /^(?:\d+[.)]|[-*•])\s+(.*\?)[*_\s]*$/.exec(l)?.[1]).filter(Boolean);
+  // Ligne de liste qui pose une question (« ? » suivi d'un espace ou en fin de ligne : pas
+  // celui d'une adresse web), même suivie d'une recommandation.
+  const listed = lines.map((l) => /^(?:\d+[.)]|[-*•])\s+(.*\?(?:\s.*)?)$/.exec(l)?.[1]?.replace(/[*_\s]+$/, "")).filter(Boolean);
   if (listed.length) return cleanQuestions(listed);
   const last = lines.at(-1) ?? "";
   return /\?[*_\s]*$/.test(last) && last.length <= 400 ? cleanQuestions([last]) : [];
@@ -122,7 +126,7 @@ function sessionEvent(payload, ts, inApp) {
   if (hook === "UserPromptSubmit") return { ...base, type: "reply" };
   if (hook === "Stop") return { ...base, type: "ask", inApp, questions: sessionQuestionsOf(payload.last_assistant_message) };
   if (hook === "Notification" && payload.notification_type === "permission_prompt") {
-    return { ...base, type: "wait", inApp, message: maskSecrets(String(payload.message ?? "")).slice(0, MAX_QUESTION_LENGTH) };
+    return { ...base, type: "wait", inApp, message: clipText(maskSecrets(String(payload.message ?? "")), 500) };
   }
   return null;
 }
