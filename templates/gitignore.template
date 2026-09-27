@@ -68,5 +68,5 @@ Desktop.ini
 *.swo
 *~
 
-# ottho-pipeline (journal local des sub-agents)
+# Ottho Builder 2 (journal local des sub-agents)
 .claude/pipeline-events.jsonl

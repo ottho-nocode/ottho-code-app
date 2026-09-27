@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Hook du plugin ottho-code-app : PreToolUse / PostToolUse (matcher Agent|Task) et
 // SubagentStop. Journalise les sub-agents dans <projet>/.claude/pipeline-events.jsonl,
-// lu par l'app ottho-pipeline :
+// lu par l'app Ottho Builder 2 :
 //   start  : PreToolUse de l'outil Agent (feature tirée du prompt) ;
 //   launch : PostToolUse d'un sub-agent lancé en arrière-plan (relie tool_use_id et agentId) ;
 //   end    : SubagentStop (vraie fin, réponse lue dans la transcription) ou PostToolUse synchrone ;

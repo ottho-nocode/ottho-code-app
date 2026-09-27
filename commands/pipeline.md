@@ -4,7 +4,7 @@ description: Rouvre le pipeline visuel des agents dans le navigateur, ou expliqu
 
 # /pipeline
 
-Le pipeline (`ottho-pipeline`) est une app locale : carte des agents, agent actif en direct, avancement de chaque `US-XX`, questions, validations, éléments de marque, et un terminal Claude Code intégré. Comme Claude Code peut tourner **dans** le pipeline, le pipeline ne doit dépendre d'aucune session Claude Code : il se lance dans un terminal ordinaire et y reste (Ctrl+C pour l'arrêter).
+Le pipeline (Ottho Builder 2) est une app locale : carte des agents, agent actif en direct, avancement de chaque `US-XX`, questions, validations, éléments de marque, et un terminal Claude Code intégré. Comme Claude Code peut tourner **dans** le pipeline, le pipeline ne doit dépendre d'aucune session Claude Code : il se lance dans un terminal ordinaire et y reste (Ctrl+C pour l'arrêter).
 
 ## Séquence
 
@@ -14,7 +14,7 @@ Le pipeline (`ottho-pipeline`) est une app locale : carte des agents, agent acti
    npx -y ottho-pipeline@1.0.0 --reopen --project "${CLAUDE_PROJECT_DIR:-$PWD}"
    ```
 
-2. Si la sortie contient `ottho-pipeline déjà ouvert : http://127.0.0.1:<port>`, le navigateur s'est ouvert : redonne l'adresse à l'utilisateur.
+2. Si la sortie contient `Ottho Builder 2 déjà ouvert : http://127.0.0.1:<port>`, le navigateur s'est ouvert : redonne l'adresse à l'utilisateur.
 3. Sinon, **ne lance pas l'app toi-même** (une tâche de fond de cette session s'arrêterait avec elle). Explique à l'utilisateur d'ouvrir un terminal ordinaire (Terminal sur macOS, PowerShell sur Windows) et d'y taper :
 
    ```bash

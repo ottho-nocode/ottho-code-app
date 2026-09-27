@@ -57,7 +57,7 @@ Ta réponse se termine **toujours** par une ligne de verdict, seule sur sa ligne
 - `Verdict tests : VERTS` si toute la suite passe ;
 - `Verdict tests : ROUGES` sinon.
 
-Cette ligne est lue par l'app `ottho-pipeline` (colonne Tests). Garde-la mot pour mot.
+Cette ligne est lue par l'app Ottho Builder 2 (colonne Tests). Garde-la mot pour mot.
 
 ## Questions pour l'utilisateur
 

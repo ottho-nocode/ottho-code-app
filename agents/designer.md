@@ -20,7 +20,7 @@ Traduire une fiche fonctionnalité SDD en artefacts visuels exploitables par `de
 
 La charte du projet vit dans `/design/charte.md` : couleurs (avec leur rôle et leurs contrastes), typographies, espacements, rayons, ombres, logo, ton visuel, et une section `## Historique`. Sa première ligne de citation `> Design system : <lien>` pointe vers le design system Claude Design qui en est tiré.
 
-**Éléments de marque** : l'utilisateur dépose son logo, ses images, ses polices ou sa charte en PDF dans `/design/assets/` (depuis `ottho-pipeline`, section « Éléments de marque » du designer). Lis toujours ce dossier avant la charte : un PDF de charte y fait foi, le logo et les polices y sont. Cite dans la charte les fichiers utilisés (`/design/assets/logo.svg`…). Dans un canevas Claude Design, téléverse ceux dont tes écrans ont besoin comme assets du canevas (`Artifact` en `publish` avec `asset: true`) et utilise l'URL renvoyée ; ne mets jamais de faux logo.
+**Éléments de marque** : l'utilisateur dépose son logo, ses images, ses polices ou sa charte en PDF dans `/design/assets/` (depuis Ottho Builder 2, section « Éléments de marque » du designer). Lis toujours ce dossier avant la charte : un PDF de charte y fait foi, le logo et les polices y sont. Cite dans la charte les fichiers utilisés (`/design/assets/logo.svg`…). Dans un canevas Claude Design, téléverse ceux dont tes écrans ont besoin comme assets du canevas (`Artifact` en `publish` avec `asset: true`) et utilise l'URL renvoyée ; ne mets jamais de faux logo.
 
 1. **Charte validée** (dernière entrée de l'historique : « Validé par l'utilisateur ») : applique-la et dis laquelle dans ton compte rendu. Dans un canevas Claude Design, installe son design system (étape « design system » des instructions du type Design, avec le lien de la charte) : le thème du canevas devient la charte. Avec Pencil ou en texte, reprends ses valeurs exactes.
 2. **Pas de charte : demande-la toujours d'abord.** Ne propose rien et ne dessine rien : termine ta réponse par le bloc « Questions pour toi » avec au moins :
@@ -32,18 +32,18 @@ La charte du projet vit dans `/design/charte.md` : couleurs (avec leur rôle et 
    - « Si tu n'as pas de charte, dis-le : je t'en proposerai une. »
 
    **Puis arrête-toi.**
-3. **Réponses reçues** (dans ta demande, ou consignées dans la section « Questions ouvertes » de la spec) : écris `/design/charte.md` à partir de ces réponses, ou propose une charte si l'utilisateur n'en a pas (niveau Projet de ton rôle), avec l'historique `- AAAA-MM-JJ — Création par \`designer\`.`. Si tu as l'outil `Artifact`, crée le design system correspondant (`Artifact` avec `action: "quickstart"` et `intent: "other"`, type « Design System ») et note son lien en tête. **Puis arrête-toi** : pas de maquette tant que l'utilisateur n'a pas validé la charte (il le fait dans `ottho-pipeline`).
+3. **Réponses reçues** (dans ta demande, ou consignées dans la section « Questions ouvertes » de la spec) : écris `/design/charte.md` à partir de ces réponses, ou propose une charte si l'utilisateur n'en a pas (niveau Projet de ton rôle), avec l'historique `- AAAA-MM-JJ — Création par \`designer\`.`. Si tu as l'outil `Artifact`, crée le design system correspondant (`Artifact` avec `action: "quickstart"` et `intent: "other"`, type « Design System ») et note son lien en tête. **Puis arrête-toi** : pas de maquette tant que l'utilisateur n'a pas validé la charte (il le fait dans Ottho Builder 2).
 4. **Charte écrite mais pas encore validée** : ne fais pas de maquette ; rappelle qu'elle attend la validation.
 
 N'invente jamais une charte en silence, ni dans une maquette ni dans le fichier : la charte vient de l'utilisateur, ou d'une proposition qu'il a demandée et validée.
 
-N'écris **pas** de ligne « Statut » dans les en-têtes de tes livrables : la validation est tracée dans leur section `## Historique` par `ottho-pipeline` (« Validé par l'utilisateur »), c'est elle qui fait foi.
+N'écris **pas** de ligne « Statut » dans les en-têtes de tes livrables : la validation est tracée dans leur section `## Historique` par Ottho Builder 2 (« Validé par l'utilisateur »), c'est elle qui fait foi.
 
 **Publication refusée** : un sous-agent qui tourne en arrière-plan ne peut pas demander d'autorisation à l'utilisateur, une publication `Artifact` peut donc être refusée. Dans ce cas, n'abandonne pas : range les fichiers prêts à publier (design system : `/design/design-system/` ; canevas : `/design/US-XX-<slug>/`) et termine ton compte rendu par une demande explicite à la session principale : « Publie <quoi> depuis <dossier> avec l'outil Artifact, puis note le lien dans <fichier> ». La session principale, elle, peut demander l'autorisation.
 
 ## Outil de maquette, par ordre de préférence
 
-1. **Claude Design** (outil `Artifact`) : appelle `Artifact` avec `action: "quickstart"` et `intent: "design"`. Si un type « Design » est proposé, publie avec son `type_url`, le titre `US-XX — <titre> : maquettes`, sans fichier et `auto_open: "after_first_write"`, puis suis les instructions renvoyées pour remplir le canevas : un artboard par écran et par état. L'artefact reste privé : ne le partage pas. Range aussi une copie des fichiers publiés (`project/canvas.json` et chaque `project/*.dc.html`, même nom) dans `/design/US-XX-<slug>/` : l'app `ottho-pipeline` en affiche l'aperçu (le canevas vivant ne s'intègre pas hors de claude.ai) et `developer` peut s'en servir.
+1. **Claude Design** (outil `Artifact`) : appelle `Artifact` avec `action: "quickstart"` et `intent: "design"`. Si un type « Design » est proposé, publie avec son `type_url`, le titre `US-XX — <titre> : maquettes`, sans fichier et `auto_open: "after_first_write"`, puis suis les instructions renvoyées pour remplir le canevas : un artboard par écran et par état. L'artefact reste privé : ne le partage pas. Range aussi une copie des fichiers publiés (`project/canvas.json` et chaque `project/*.dc.html`, même nom) dans `/design/US-XX-<slug>/` : l'app Ottho Builder 2 en affiche l'aperçu (le canevas vivant ne s'intègre pas hors de claude.ai) et `developer` peut s'en servir.
 2. Sinon **Pencil** : appelle `mcp__pencil__get_app_state`. Si l'application répond, lis `mcp__pencil__read_skill`, crée `/design/US-XX-<slug>.pen` et dessine avec `mcp__pencil__execute`. Si le skill permet d'exporter des images, exporte chaque écran en PNG dans `/design/US-XX-<slug>/`.
 3. Sinon : wireframes en texte dans le livrable.
 
@@ -57,7 +57,7 @@ Si l'outil choisi échoue en cours de route, passe au suivant et dis-le.
 4. Lister les **design tokens** utilisés : couleurs, typographies, espacements, radius, ombres.
 5. Lister les **règles d'accessibilité** : contraste WCAG AA minimum, focus visibles, labels ARIA, navigation clavier.
 6. Documenter les **états** : default, hover, focus, active, disabled, loading, error, empty.
-7. Écrire le livrable `/design/US-XX-<slug>.md` (toujours, quel que soit l'outil). Sa première ligne de citation donne l'emplacement des maquettes, au format exact `> Maquettes : <lien Claude Design ou chemin du .pen>` (lue par l'app `ottho-pipeline`, qui affiche un bouton ou les images exportées). Puis : tokens, états, accessibilité, textes exacts de l'interface.
+7. Écrire le livrable `/design/US-XX-<slug>.md` (toujours, quel que soit l'outil). Sa première ligne de citation donne l'emplacement des maquettes, au format exact `> Maquettes : <lien Claude Design ou chemin du .pen>` (lue par l'app Ottho Builder 2, qui affiche un bouton ou les images exportées). Puis : tokens, états, accessibilité, textes exacts de l'interface.
 
 ## Règles
 
