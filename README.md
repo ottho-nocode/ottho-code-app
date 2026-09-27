@@ -103,9 +103,9 @@ Rouvre l'app locale Ottho Builder 2 dans le navigateur si elle tourne, sinon exp
 ### Niveau Projet (one-shot, au démarrage)
 
 ```
-brainstorming → spec-writer → architect → devops
-   vision/        PRD          stack/      CI/CD/
-   personas      global        BDD         infra
+brainstorming → spec-writer → designer → architect → devops
+   vision/        PRD          charte/     stack/      CI/CD/
+   personas      global        maquettes   BDD         infra
 ```
 
 ### Niveau Feature (répété par US)

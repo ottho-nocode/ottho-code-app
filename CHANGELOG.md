@@ -26,6 +26,9 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Corrigé
 
+- **Le designer n'intervenait pas au démarrage d'un projet** : `project-bootstrap` et `/init-agency-project` passent en 5 étapes, avec `designer` (charte demandée d'abord, design system, maquettes des écrans clés) entre le PRD et l'architecture.
+- **Questions : un seul canal, le terminal** (plus de double réponse app / terminal). `PreToolUse` `AskUserQuestion` journalise les questions posées (Ottho Builder 2 ouvre le terminal) ; la méthode demande de consigner chaque réponse dans le livrable concerné.
+
 - **Réponses données dans Ottho Builder 2 ignorées par la session principale** (elle lançait l'agent suivant avec ses propres hypothèses) : à chaque message de l'utilisateur, `answered-guard` ajoute au contexte les réponses consignées depuis le dernier tour, qui priment sur toute hypothèse. Chaque agent fait primer les réponses consignées sur les hypothèses de sa demande et signale les contradictions.
 
 - **Questions reposées dans le terminal alors que l'utilisateur y avait répondu dans Ottho Builder 2** : nouveau hook `PreToolUse` `AskUserQuestion` (`scripts/answered-guard.mjs`) qui lit les réponses consignées (`docs/questions/*.md`, specs, PRD), refuse les questions déjà répondues et donne les réponses à Claude ; il ne repose que les autres. Dans l'autre sens, `PostToolUse` `AskUserQuestion` journalise les réponses données dans le sélecteur (événement `answered`) pour que l'app ne les laisse pas en attente. Consigne ajoutée au skill `agency-method`.

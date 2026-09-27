@@ -1,6 +1,6 @@
 ---
 name: project-bootstrap
-description: Use when the user wants to start a new agency project, init a project from scratch, bootstrap a Next.js/Supabase app, or asks how to set up a new client app. Orchestrates the 4-step project-level SDD workflow (brainstorming → spec-writer → architect → devops).
+description: Use when the user wants to start a new agency project, init a project from scratch, bootstrap a Next.js/Supabase app, or asks how to set up a new client app. Orchestrates the 5-step project-level SDD workflow (brainstorming → spec-writer → designer → architect → devops).
 ---
 
 # Bootstrap projet — Ottho Code App
@@ -38,9 +38,18 @@ Invoquer `spec-writer` (niveau projet) :
 
 **STOP** — validation humaine.
 
-### 3. Architecture initiale — `architect`
+### 3. Design initial — `designer`
+
+Invoquer `designer` (niveau projet), **avant** l'architecture : la stack et le découpage en composants dépendent de l'interface.
+- Charte graphique `/design/charte.md` : il la **demande toujours d'abord** à l'utilisateur (couleurs, polices, logo, références) et s'arrête ; il n'en propose une que si l'utilisateur n'en a pas
+- Puis design system de base (tokens, typographie, composants atomiques) et maquettes des écrans clés du parcours principal du MVP (`/design/projet/`)
+
+**STOP** — validation humaine de la charte (dans le terminal ou dans Ottho Builder 2). Projet sans interface : étape sautée, dis-le.
+
+### 4. Architecture initiale — `architect`
 
 Invoquer `architect` (niveau projet) :
+- Part du PRD, de la charte et des maquettes du designer
 - Définit la stack (par défaut : Next.js 16 + Supabase + Brevo + Stripe + Vercel)
 - Schéma BDD de base (tables, relations, **RLS obligatoire**)
 - Conventions de code et de commits
@@ -50,7 +59,7 @@ Invoquer `architect` (niveau projet) :
 
 **STOP** — validation humaine.
 
-### 4. Setup infra — `devops`
+### 5. Setup infra — `devops`
 
 Invoquer `devops` (niveau projet) :
 - Init Git (si pas fait) + premier commit
@@ -62,7 +71,7 @@ Invoquer `devops` (niveau projet) :
 - `.env.example` avec toutes les variables documentées
 - Page Notion projet si MCP `notion` configuré
 
-### 5. Validation finale
+### 6. Validation finale
 
 À la fin du bootstrap, le projet contient :
 - `CLAUDE.md` à la racine

@@ -13,7 +13,7 @@ Tu es l'agent **Designer** de la méthode agence Ottho Code App.
 
 Traduire une fiche fonctionnalité SDD en artefacts visuels exploitables par `developer`.
 
-- **Niveau Projet** : définir le design system de base (tokens couleurs, typographie, spacings, composants atomiques).
+- **Niveau Projet** (démarrage, après le PRD et **avant** `architect`) : la charte graphique (demandée d'abord, voir ci-dessous), le design system de base (tokens couleurs, typographie, spacings, composants atomiques) et les maquettes des écrans clés du parcours principal du MVP, dans `/design/projet/`. Prochaine étape recommandée ensuite : `architect` (niveau projet).
 - **Niveau Feature** : produire les wireframes basse-fi puis les maquettes haute-fi des écrans de la feature.
 
 ## Charte graphique : avant toute maquette

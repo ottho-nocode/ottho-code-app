@@ -281,3 +281,11 @@ test("PostToolUse AskUserQuestion : réponses du sélecteur du terminal journali
   assert.deepEqual(askAnswers({ tool_input: {} }), []);
   assert.equal(buildEvent({ ...payload, tool_input: { questions: [] } }, { now: NOW }), null);
 });
+
+test("PreToolUse AskUserQuestion (session principale) : Claude pose des questions dans le terminal (wait, kind questions)", () => {
+  const payload = { hook_event_name: "PreToolUse", tool_name: "AskUserQuestion", session_id: "s1", tool_input: { questions: [{ question: "Quelle cible ?" }, { question: "Quel modèle ?" }] } };
+  assert.deepEqual(buildEvent(payload, { now: NOW, inApp: true }), {
+    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "wait", agent: "claude", source: "session", session: "s1", inApp: true,
+    kind: "questions", message: "2 questions dans le terminal", questions: ["Quelle cible ?", "Quel modèle ?"],
+  });
+});

@@ -9,7 +9,8 @@
 // Session principale (le terminal central, qui orchestre les agents) :
 //   ask   : Stop, fin d'un tour ; questions posées à l'utilisateur (liste vide s'il n'y en a pas) ;
 //   reply : UserPromptSubmit, l'utilisateur a répondu (jamais le contenu de son message) ;
-//   wait  : Notification permission_prompt, Claude attend une autorisation ;
+//   wait  : Notification permission_prompt, Claude attend une autorisation ; ou PreToolUse
+//   AskUserQuestion, Claude pose des questions dans le terminal (kind « questions ») ;
 //   answered : PostToolUse AskUserQuestion, réponses données dans le sélecteur du terminal
 //   (question et réponse, pour que l'app ne les laisse pas « en attente »).
 // inApp : la session tourne dans le terminal intégré du pipeline (OTTHO_PIPELINE_TERMINAL=1).
@@ -248,6 +249,11 @@ export function buildEvent(payload, { now = new Date(), branch = null, transcrip
   const hook = payload?.hook_event_name;
   const ts = now.toISOString();
   if (hook === "Stop" || hook === "UserPromptSubmit" || hook === "Notification") return sessionEvent(payload, ts, inApp);
+  if (hook === "PreToolUse" && payload?.tool_name === "AskUserQuestion" && !payload.agent_id) {
+    const questions = (payload.tool_input?.questions ?? []).map((q) => q?.question).filter((q) => typeof q === "string" && q.trim()).map((q) => clipText(maskSecrets(q))).slice(0, MAX_QUESTIONS);
+    if (!questions.length) return null;
+    return { v: 1, ts, type: "wait", agent: "claude", source: "session", session: payload.session_id ?? null, inApp, kind: "questions", message: `${questions.length} question${questions.length > 1 ? "s" : ""} dans le terminal`, questions };
+  }
   if (hook === "PostToolUse" && payload?.tool_name === "AskUserQuestion") {
     const pairs = askAnswers(payload);
     return pairs.length ? { v: 1, ts, type: "answered", agent: "claude", source: "terminal", session: payload.session_id ?? null, pairs } : null;

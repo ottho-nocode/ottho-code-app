@@ -69,7 +69,7 @@ Le plugin n'installe aucun serveur MCP : chaque projet ajoute les siens dans son
 
 ## Slash commands
 
-- `/init-agency-project` — bootstrap projet complet (4 agents).
+- `/init-agency-project` — bootstrap projet complet (5 agents : brainstorming, spec-writer, designer, architect, devops).
 - `/new-feature "titre"` — démarre un cycle SDD niveau feature.
 - `/validate-feature` — phase Validate (code-reviewer + tester).
 - `/ship-feature` — vérification finale + ouverture PR + doc.
@@ -80,6 +80,9 @@ Le plugin n'installe aucun serveur MCP : chaque projet ajoute les siens dans son
 - **Sinon** : dossier `/docs/` du repo (PRD, architecture, devops, ADR).
 - Dans tous les cas, le code reste **dans Git** et la doc dans le repo (Notion est un miroir, pas l'inverse).
 
-## Questions déjà répondues (Ottho Builder 2)
+## Questions à l'utilisateur : dans le terminal
 
-L'utilisateur peut répondre aux questions des agents dans Ottho Builder 2 : ses réponses sont consignées dans `docs/questions/*.md`, la section « Questions ouvertes » des specs ou de `docs/PRD.md` (case cochée suivie de « > Réponse (date) : … »). **Avant de lui poser une question, et avant de lancer l'agent suivant, relis ces fichiers** (pas seulement l'Historique) : reprends ses réponses au lieu de les redemander, transmets-les à l'agent, et ne les remplace jamais par tes hypothèses. Le hook `answered-guard` t'envoie aussi, à chaque message de l'utilisateur, les réponses données depuis ton dernier tour. Le hook `answered-guard` refuse d'ailleurs toute question du sélecteur (`AskUserQuestion`) déjà répondue et te donne la réponse : ne repose alors que les questions restées sans réponse.
+Les questions des agents se posent **dans le terminal** (Ottho Builder 2 les affiche et ouvre le terminal, sans champ de réponse). Quand l'utilisateur répond :
+- **consigne la réponse** dans le livrable concerné, section « Questions ouvertes » (case cochée, puis `  > Réponse (AAAA-MM-JJ) : …`) : spec pour une feature, `docs/PRD.md` au niveau projet, sinon `docs/questions/<US-XX ou projet>.md` ; c'est là que les agents suivants la lisent ;
+- **transmets-la** à l'agent suivant et ne la remplace jamais par une hypothèse ;
+- avant de reposer une question, **relis ces sections** : si elle y a déjà une réponse, reprends-la. Le hook `answered-guard` refuse d'ailleurs une question du sélecteur (`AskUserQuestion`) déjà répondue et te donne la réponse.
