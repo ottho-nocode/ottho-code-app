@@ -16,7 +16,7 @@ Quand l'utilisateur demande à **démarrer un nouveau projet** / **init projet**
 
 ### 0. Brief
 
-Si `docs/brief.md` existe (onboarding d'Ottho Builder 2), annonce-le et transmets-le à `brainstorming` : il en part et ne pose que les questions qui manquent. Sinon, `brainstorming` construit le cadrage par questions.
+Si `docs/brief.md` existe (onboarding d'Ottho Builder 2, canevas en six blocs du module « De l'idée au projet validé »), annonce-le et transmets-le à `brainstorming` : il vérifie chaque bloc avec ses critères, challenge ce qui ne passe pas et ne pose que les questions qui manquent. Sinon, `brainstorming` construit le cadrage par questions.
 
 **Validations dans Ottho Builder 2** : l'utilisateur peut valider le PRD et l'architecture dans l'app (entrée « Validé par l'utilisateur (Ottho Builder 2) » dans leur « Historique »). Un message du type « Le PRD est validé dans le pipeline » vaut validation : passe à l'étape suivante.
 

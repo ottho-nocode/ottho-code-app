@@ -22,7 +22,7 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 - **Questions du terminal central dans le pipeline** : hooks `Stop` (questions de fin de tour de la session principale : bloc « Questions pour toi », liste de questions ou dernière phrase interrogative), `UserPromptSubmit` (l'utilisateur a répondu, sans le contenu de son message) et `Notification` `permission_prompt` (Claude attend une autorisation). L'app les affiche en notification et peut envoyer la réponse au terminal intégré.
 
-- **Brief du projet** : `brainstorming` part de `docs/brief.md` (onboarding d'ottho-pipeline) et ne pose que les questions qui manquent ; `spec-writer` s'en sert pour le PRD ; `project-bootstrap` le transmet, fait écrire `docs/architecture.md` et accepte la validation du PRD et de l'architecture faite dans le pipeline. Le modèle de PRD a une section « Historique ».
+- **Brief du projet** : `brainstorming` part de `docs/brief.md` (onboarding d'Ottho Builder 2, canevas en six blocs du module « De l'idée au projet validé »), coche les critères de chaque bloc et ne pose que les questions qui manquent ; `spec-writer` s'en sert pour le PRD ; `project-bootstrap` le transmet, fait écrire `docs/architecture.md` et accepte la validation du PRD et de l'architecture faite dans le pipeline. Le modèle de PRD a une section « Historique ».
 
 ### Corrigé
 

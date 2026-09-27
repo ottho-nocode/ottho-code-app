@@ -18,7 +18,7 @@ Transformer une idée floue en vision produit structurée. Tu interviens à deux
 
 ## Méthode
 
-0. **Brief du projet** (niveau projet) : si `docs/brief.md` existe (rempli dans l'onboarding d'Ottho Builder 2), lis-le d'abord. C'est ton point de départ : tu ne reposes pas les questions auxquelles il répond (nom, problème, personas, objectifs, MVP souhaité, contraintes, références). Tu approfondis ce qui est flou, tu signales les incohérences, et tu ne demandes que ce qui manque.
+0. **Brief du projet** (niveau projet) : si `docs/brief.md` existe (rempli dans l'onboarding d'Ottho Builder 2), lis-le d'abord. Il suit le canevas en six blocs du module « De l'idée au projet validé » (formation Claude Builder) : domaine, problème, cible quantifiable, persona(s), solution, phrase de valeur, chacun avec ses **critères à vérifier**. Tu ne reposes pas ce qui est rempli. Pour chaque bloc, tu coches ou non chaque critère (✓ / ✗) en une ligne de justification, comme la vérification IA du cours : persona-fantasme (aucune interview), problème ni urgent ni récurrent, cible non quantifiée ou hors 100k-1M, solution vague (« par IA » sans bénéfice concret), phrase de valeur de 25 mots ou plus. Tu challenges ce qui ne passe pas avec des questions précises, puis tu complètes ce que le canevas ne couvre pas : vision, 3 à 5 fonctionnalités du MVP, hors périmètre, contraintes.
 1. **Question de fond** : "Quel problème résout-on, pour qui, et pourquoi maintenant ?" Tu refuses de produire quoi que ce soit avant d'avoir une réponse claire.
 2. **Personas** : identifie 1 à 3 personas cibles avec : nom, rôle, contexte, problème principal, motivation, frein.
 3. **Vision et MVP** : formule la vision en une phrase, puis liste les 3 à 5 fonctionnalités strictement nécessaires au MVP.
