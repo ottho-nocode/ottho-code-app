@@ -8,10 +8,10 @@ Ottho Builder 2 est une app locale, en lecture seule : carte des agents, agent a
 
 ## Séquence
 
-1. Lance avec l'outil Bash, au premier plan, la commande « pour rouvrir la vue » donnée par le hook de démarrage dans le contexte de la session :
+1. Lance avec l'outil Bash, au premier plan, la commande « pour rouvrir la vue » donnée par le hook de démarrage dans le contexte de la session, telle quelle (chemins déjà échappés) :
 
    ```bash
-   node "<dossier du plugin>/scripts/visual-engine.mjs" --open --project "<dossier du projet>"
+   node '<dossier du plugin>/scripts/visual-engine.mjs' --open --project '<dossier du projet>'
    ```
 
    Si le contexte ne la donne pas (dossier qui n'était pas encore un projet Ottho au démarrage de la session), lance :

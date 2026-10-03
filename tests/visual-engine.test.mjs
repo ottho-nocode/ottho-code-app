@@ -1,14 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { mkdir, mkdtemp, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { NOT_FOUND, NOT_STARTED, PORTS, STARTING, STARTING_NO_OPEN, engineOf, isOtthoProject, main, parsePorts } from "../scripts/visual-engine.mjs";
+import { NOT_FOUND, NOT_STARTED, PORTS, STARTING, STARTING_NO_OPEN, engineOf, isOtthoProject, main, parsePorts, shellQuote } from "../scripts/visual-engine.mjs";
 
 const SCRIPT = fileURLToPath(new URL("../scripts/visual-engine.mjs", import.meta.url));
 const PLUGIN = dirname(dirname(SCRIPT));
@@ -68,9 +68,10 @@ createServer((req, res) => {
 `;
 
 // Projet temporaire (files : chemin → contenu, null pour un dossier), faux home, fausse CLI.
-async function setup(t, { files = {}, mode } = {}) {
+// name : nom du dossier du projet.
+async function setup(t, { files = {}, mode, name = "projet" } = {}) {
   const root = await mkdtemp(join(tmpdir(), "visual-engine-"));
-  const dir = join(root, "projet");
+  const dir = join(root, name);
   await mkdir(dir);
   for (const [rel, content] of Object.entries(files)) {
     const path = join(dir, rel);
@@ -85,7 +86,7 @@ async function setup(t, { files = {}, mode } = {}) {
   const port = await freePort();
   const env = { HOME: root, OTTHO_PIPELINE_HOME: home, OTTHO_PIPELINE_CLI: cli, CLAUDE_PROJECT_DIR: dir, FAKE_RECORD: record, FAKE_PORT: String(port) };
   if (mode) env.FAKE_MODE = mode;
-  t.after(() => {
+  t.after(async () => {
     for (const { pid } of launches({ record })) {
       try {
         process.kill(pid);
@@ -93,6 +94,7 @@ async function setup(t, { files = {}, mode } = {}) {
         // déjà arrêtée
       }
     }
+    await rm(root, { recursive: true, force: true, maxRetries: 3 });
   });
   return { root, dir, home, cli, record, port, env };
 }
@@ -106,6 +108,9 @@ const recorded = (ctx) => {
   return all[0];
 };
 const lockOf = (ctx) => join(ctx.dir, ".claude", "ottho-builder.lock");
+
+// Arguments d'une commande telle que le shell les lit (le programme remplacé par printf).
+const shellArgs = (command) => execFileSync("/bin/sh", ["-c", `printf '%s\\n' ${command.slice(command.indexOf(" ") + 1)}`], { encoding: "utf8" }).replace(/\n$/, "").split("\n");
 
 // Le script lancé comme par Claude Code : stdin, stdout, stderr, code de sortie.
 function runScript(args, { input = "", env, cwd }) {
@@ -132,8 +137,8 @@ test("Builder déjà lancé pour le projet : adresse et contexte, rien n'est lan
   assert.match(context, /en lecture seule/);
   assert.match(context, /questions des agents et les validations se font dans ce terminal/);
   assert.ok(context.includes(builder.url));
-  assert.ok(context.includes(`"${process.execPath}" "${ctx.cli}" brief --project "${ctx.dir}"`));
-  assert.ok(context.includes(`node "${join(PLUGIN, "scripts", "visual-engine.mjs")}" --open --project "${ctx.dir}"`));
+  assert.ok(context.includes(`'${process.execPath}' '${ctx.cli}' brief --project '${ctx.dir}'`));
+  assert.ok(context.includes(`node '${join(PLUGIN, "scripts", "visual-engine.mjs")}' --open --project '${ctx.dir}'`));
   assert.ok(!existsSync(ctx.record), "la fausse CLI n'a pas été lancée");
   assert.ok(!existsSync(join(ctx.dir, ".claude")));
 });
@@ -183,8 +188,8 @@ test("dossier neuf (fichiers cachés seulement) : lancé ; engine.json au node d
   assert.equal(out.systemMessage, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}`);
   assert.deepEqual(recorded(ctx).argv, ["--project", ctx.dir, "--plugin", plugin, "--idle-exit", "30"]);
   const context = out.hookSpecificOutput.additionalContext;
-  assert.ok(context.includes(`"${process.execPath}" "${ctx.cli}" brief --project "${ctx.dir}"`), "node du hook à la place du node disparu");
-  assert.ok(context.includes(`node "${join(plugin, "scripts", "visual-engine.mjs")}" --open`));
+  assert.ok(context.includes(`'${process.execPath}' '${ctx.cli}' brief --project '${ctx.dir}'`), "node du hook à la place du node disparu");
+  assert.ok(context.includes(`node '${join(plugin, "scripts", "visual-engine.mjs")}' --open`));
 });
 
 test("Builder introuvable (ni OTTHO_PIPELINE_CLI ni engine.json) : message d'installation, code 0", async (t) => {
@@ -287,7 +292,7 @@ test("Builder lancé qui ne répond pas dans le délai : « démarre encore » (
     const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" }, mode: "silent" });
     const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir, source), env: ctx.env, ports: [ctx.port], waitMs: 800 }));
     assert.deepEqual(out, { systemMessage: message });
-    assert.ok(!existsSync(lockOf(ctx)), "verrou retiré au bout du délai");
+    assert.ok(existsSync(lockOf(ctx)), "verrou gardé tant que le Builder démarre (il expire au bout de 15 s)");
   }
 });
 
@@ -298,10 +303,47 @@ test("Builder lancé qui s'arrête aussitôt : message « n'a pas démarré », 
   assert.deepEqual(out, { systemMessage: NOT_STARTED });
   assert.ok(Date.now() - started < 4000, `attente trop longue : ${Date.now() - started} ms`);
   assert.match(readFileSync(join(ctx.dir, ".claude", "ottho-builder.log"), "utf8"), /faux Builder : échec/);
+  assert.ok(!existsSync(lockOf(ctx)), "verrou retiré : le processus s'est arrêté");
 });
 
-test("isOtthoProject : marqueurs du pipeline ou dossier neuf ; sinon non", async () => {
+test("chemins avec espace, apostrophe, guillemet et $ : commandes du contexte valides pour le shell", async (t) => {
+  const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" }, name: `projet d'Ottho "v2" $HOME \`x\`` });
+  const plugin = join(ctx.root, "plug'in $PATH");
+  const builder = await fakeBuilder(ctx.dir);
+  t.after(builder.close);
+  const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir), env: { ...ctx.env, CLAUDE_PLUGIN_ROOT: plugin }, ports: [builder.port] }));
+  assert.equal(out.systemMessage, `Ottho Builder 2 : ${builder.url}`);
+  const lines = out.hookSpecificOutput.additionalContext.split("\n");
+  const brief = lines.find((l) => l.startsWith("Pour écrire le brief")).replace(/^[^:]*: /, "").replace(/ suivi d'une seule option.*$/, "");
+  assert.deepEqual(shellArgs(`x ${brief}`), [process.execPath, ctx.cli, "brief", "--project", ctx.dir]);
+  const reopen = lines.find((l) => l.startsWith("Pour rouvrir")).replace(/^.*premier plan : /, "");
+  assert.deepEqual(shellArgs(reopen), [join(plugin, "scripts", "visual-engine.mjs"), "--open", "--project", ctx.dir]);
+  assert.equal(shellQuote("l'a"), `'l'\\''a'`);
+});
+
+test("--open sur un dossier de projet introuvable : une ligne d'erreur, code 0, rien de créé ni lancé", async (t) => {
+  const ctx = await setup(t);
+  const missing = join(ctx.root, "faute-de-frappe");
+  const res = await runScript(["--open", "--project", missing, "--ports", String(ctx.port)], { env: ctx.env, cwd: ctx.root });
+  assert.deepEqual(res, { code: 0, stdout: `dossier de projet introuvable : ${missing}\n`, stderr: "" });
+  assert.ok(!existsSync(missing));
+  assert.deepEqual(launches(ctx), []);
+  // En hook : silencieux.
+  assert.equal(await main({ stdin: sessionStart(missing), env: { ...ctx.env, CLAUDE_PROJECT_DIR: missing }, ports: [ctx.port] }), "");
+  assert.ok(!existsSync(missing));
+});
+
+test("engineOf : engine.json lu dans le HOME de l'environnement donné si OTTHO_PIPELINE_HOME est absent", async (t) => {
+  const ctx = await setup(t);
+  await mkdir(join(ctx.root, ".ottho-pipeline"));
+  await writeFile(join(ctx.root, ".ottho-pipeline", "engine.json"), JSON.stringify({ node: process.execPath, cli: ctx.cli }));
+  assert.deepEqual(engineOf({ HOME: ctx.root }), { node: process.execPath, cli: ctx.cli });
+  assert.equal(engineOf({ HOME: ctx.home }), null);
+});
+
+test("isOtthoProject : marqueurs du pipeline ou dossier neuf ; sinon non", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "visual-engine-markers-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
   const make = async (name, files) => {
     const dir = join(root, name);
     await mkdir(dir, { recursive: true });

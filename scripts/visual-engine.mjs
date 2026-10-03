@@ -16,7 +16,8 @@
 // --project <dossier> remplace le dossier de la session ; --ports a-b : autres ports (tests).
 // Jamais bloquant : toute erreur → sortie 0, rien sur stderr.
 import { spawn } from "node:child_process";
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, rmSync, statSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -57,8 +58,9 @@ export function engineOf(env) {
   let cli = env.OTTHO_PIPELINE_CLI;
   let node = process.execPath;
   if (!cli) {
+    const home = env.OTTHO_PIPELINE_HOME || join(env.HOME || homedir(), ".ottho-pipeline");
     try {
-      ({ node, cli } = JSON.parse(readFileSync(join(env.OTTHO_PIPELINE_HOME || join(homedir(), ".ottho-pipeline"), "engine.json"), "utf8")));
+      ({ node, cli } = JSON.parse(readFileSync(join(home, "engine.json"), "utf8")));
     } catch {
       return null;
     }
@@ -84,23 +86,54 @@ export async function findBuilder(dir, ports) {
   return port ? `http://127.0.0.1:${port}` : null;
 }
 
+const removeQuietly = (path) => {
+  try {
+    rmSync(path, { force: true });
+  } catch {
+    // reste sur le disque : un verrou expire au bout de 15 s
+  }
+};
+
 // Verrou de lancement : true si ce hook le prend, false si un autre hook lance déjà le Builder.
-// Un verrou de plus de 15 s (hook interrompu avant de le retirer) est repris.
+// Un verrou de plus de 15 s (hook interrompu, Builder lent) est repris : renommé d'abord (un seul
+// hook y parvient), et rendu si c'était entre-temps le verrou récent d'un autre hook.
 function takeLock(lock) {
   mkdirSync(dirname(lock), { recursive: true });
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       closeSync(openSync(lock, "wx"));
       return true;
     } catch (err) {
       if (err?.code !== "EEXIST") throw err;
     }
+    let seen;
     try {
-      if (Date.now() - statSync(lock).mtimeMs < LOCK_FRESH_MS) return false;
-      rmSync(lock, { force: true });
+      seen = statSync(lock);
     } catch {
-      // verrou retiré entre-temps : nouvel essai
+      continue; // retiré entre-temps
     }
+    if (Date.now() - seen.mtimeMs < LOCK_FRESH_MS) return false;
+    const stale = `${lock}.${process.pid}.${randomBytes(4).toString("hex")}`;
+    try {
+      renameSync(lock, stale);
+    } catch {
+      continue; // un autre hook l'a repris
+    }
+    let other = false;
+    try {
+      other = statSync(stale).ino !== seen.ino;
+    } catch {
+      // disparu : rien à rendre
+    }
+    if (other) {
+      try {
+        renameSync(stale, lock);
+      } catch {
+        removeQuietly(stale);
+      }
+      return false;
+    }
+    removeQuietly(stale);
   }
   return false;
 }
@@ -152,11 +185,15 @@ export function openBrowser(url) {
   child.unref();
 }
 
+// Argument shell POSIX : entre apostrophes, chaque apostrophe écrite '\''.
+export const shellQuote = (s) => `'${String(s).replace(/'/g, "'\\''")}'`;
+
 export function contextFor({ url, engine, dir, pluginRoot }) {
+  const q = shellQuote;
   return [
     `Ottho Builder 2 (vue du pipeline des agents, en lecture seule) tourne sur ${url} pour ce projet. Les questions des agents et les validations se font dans ce terminal : l'app les affiche sans rien écrire, sauf son panneau Config (variables dans .env.local).`,
-    engine && `Pour écrire le brief du projet (docs/brief.md) : "${engine.node}" "${engine.cli}" brief --project "${dir}" suivi d'une seule option : --list (exemples enregistrés), --preset <nom> ou --json <fichier>.`,
-    `Pour rouvrir la vue dans le navigateur (commande /pipeline), avec l'outil Bash au premier plan : node "${join(pluginRoot, "scripts", "visual-engine.mjs")}" --open --project "${dir}"`,
+    engine && `Pour écrire le brief du projet (docs/brief.md) : ${q(engine.node)} ${q(engine.cli)} brief --project ${q(dir)} suivi d'une seule option : --list (exemples enregistrés), --preset <nom> ou --json <fichier>.`,
+    `Pour rouvrir la vue dans le navigateur (commande /pipeline), avec l'outil Bash au premier plan : node ${q(join(pluginRoot, "scripts", "visual-engine.mjs"))} --open --project ${q(dir)}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -201,6 +238,15 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
     return JSON.stringify(additionalContext ? { systemMessage, hookSpecificOutput: { hookEventName: "SessionStart", additionalContext } } : { systemMessage });
   };
 
+  // Dossier absent (faute de frappe dans --project) : rien n'est sondé ni créé.
+  let isDir = false;
+  try {
+    isDir = statSync(dir).isDirectory();
+  } catch {
+    // introuvable
+  }
+  if (!isDir) return force ? `dossier de projet introuvable : ${dir}\n` : "";
+
   const engine = engineOf(env);
   let url = await findBuilder(dir, probed);
   if (url) {
@@ -216,23 +262,17 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
     if (!engine) return say(NOT_FOUND);
     const lock = join(dir, ".claude", "ottho-builder.lock");
     let mine = false;
-    let waited;
+    let child = null;
     try {
-      let child = null;
-      try {
-        mine = takeLock(lock);
-        if (mine) child = launch({ engine, dir, pluginRoot, env, spawnFn, noOpen });
-      } catch {
-        return say(NOT_STARTED);
-      }
-      waited = await waitBuilder(dir, probed, child, waitMs);
-    } finally {
-      try {
-        if (mine) rmSync(lock, { force: true });
-      } catch {
-        // verrou resté : repris au-delà de 15 s
-      }
+      mine = takeLock(lock);
+      if (mine) child = launch({ engine, dir, pluginRoot, env, spawnFn, noOpen });
+    } catch {
+      if (mine) removeQuietly(lock);
+      return say(NOT_STARTED);
     }
+    const waited = await waitBuilder(dir, probed, child, waitMs);
+    // Builder qui démarre encore : verrou gardé (expire au bout de 15 s), pas de second lancement.
+    if (mine && (waited.url || waited.exited)) removeQuietly(lock);
     url = waited.url;
     if (!url) return say(waited.exited ? NOT_STARTED : noOpen ? STARTING_NO_OPEN : STARTING);
   }

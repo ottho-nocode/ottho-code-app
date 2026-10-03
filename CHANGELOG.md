@@ -6,10 +6,10 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Ajouté
 
-- **Ottho Builder 2 lancé au démarrage de Claude Code** (hook `SessionStart`, `scripts/visual-engine.mjs`) : retrouve le Builder du projet (ports 4317 à 4326) ou, dans un projet Ottho ou un dossier neuf, le démarre détaché (`--idle-exit 30`, journal `.claude/ottho-builder.log`) ; adresse affichée à l'utilisateur, commandes du brief et de réouverture données à Claude. Verrou `.claude/ottho-builder.lock` (deux sessions simultanées : un seul Builder) ; après `compact` ou `clear`, lancé sans ouvrir le navigateur. `/pipeline` le rouvre (`visual-engine.mjs --open`) : plus de `npx ottho-pipeline` à lancer dans un terminal à part. Jamais bloquant.
+- **Ottho Builder 2 lancé au démarrage de Claude Code** (hook `SessionStart`, `scripts/visual-engine.mjs`) : retrouve le Builder du projet (ports 4317 à 4326) ou, dans un projet Ottho ou un dossier neuf, le démarre détaché (`--idle-exit 30`, journal `.claude/ottho-builder.log`) ; adresse affichée à l'utilisateur, commandes du brief et de réouverture données à Claude. Verrou `.claude/ottho-builder.lock` (deux sessions simultanées : un seul Builder) ; après `compact` ou `clear`, lancé sans ouvrir le navigateur. Jamais bloquant.
 - **Choix « Suivre tes recos »** sur chaque question du sélecteur (`AskUserQuestion`, ajouté par `answered-guard` via `updatedInput`) : l'IA tranche selon sa recommandation et la consigne dans le livrable.
 
-- **Commande `/pipeline`** (6e commande) : rouvre l'app locale `ottho-pipeline` si elle tourne (`--reopen`), sinon explique comment la lancer dans un terminal ordinaire (`npx ottho-pipeline`) : l'app embarque un terminal Claude Code, elle ne doit donc pas dépendre d'une session Claude Code.
+- **Commande `/pipeline`** (6e commande) : rouvre Ottho Builder 2 dans le navigateur, ou le démarre s'il ne tourne pas (`scripts/visual-engine.mjs --open`) ; plus de `npx ottho-pipeline` à lancer dans un terminal à part.
 - **Hooks `PreToolUse` / `PostToolUse` sur les sub-agents** : journalisent début, fin, agent recommandé, verdict et questions du bloc « Questions pour toi » dans `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquant, sans effet si Node est absent).
 
 ### Modifié
