@@ -138,6 +138,7 @@ test("Builder déjà lancé pour le projet : adresse et contexte, rien n'est lan
   assert.match(context, /questions des agents et les validations se font dans ce terminal/);
   assert.ok(context.includes(builder.url));
   assert.ok(context.includes(`'${process.execPath}' '${ctx.cli}' brief --project '${ctx.dir}'`));
+  assert.match(context, /--json <fichier> ; format et questions : skill project-bootstrap, étape 0\./);
   assert.ok(context.includes(`node '${join(PLUGIN, "scripts", "visual-engine.mjs")}' --open --project '${ctx.dir}'`));
   assert.ok(!existsSync(ctx.record), "la fausse CLI n'a pas été lancée");
   assert.ok(!existsSync(join(ctx.dir, ".claude")));

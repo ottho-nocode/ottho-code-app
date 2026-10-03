@@ -232,7 +232,7 @@ export function contextFor({ url, engine, dir, pluginRoot }) {
   const q = shellQuote;
   return [
     `Ottho Builder 2 (vue du pipeline des agents, en lecture seule) tourne sur ${url} pour ce projet. Les questions des agents et les validations se font dans ce terminal : l'app les affiche sans rien écrire, sauf son panneau Config (variables dans .env.local).`,
-    engine && `Pour écrire le brief du projet (docs/brief.md) : ${q(engine.node)} ${q(engine.cli)} brief --project ${q(dir)} suivi d'une seule option : --list (exemples enregistrés), --preset <nom> ou --json <fichier>.`,
+    engine && `Pour écrire le brief du projet (docs/brief.md) : ${q(engine.node)} ${q(engine.cli)} brief --project ${q(dir)} suivi d'une seule option : --list (exemples enregistrés), --preset <nom> ou --json <fichier> ; format et questions : skill project-bootstrap, étape 0.`,
     `Pour rouvrir la vue dans le navigateur (commande /pipeline), avec l'outil Bash au premier plan : node ${q(join(pluginRoot, "scripts", "visual-engine.mjs"))} --open --project ${q(dir)}`,
   ]
     .filter(Boolean)

@@ -68,8 +68,11 @@ Desktop.ini
 *.swo
 *~
 
-# Ottho Builder 2 (journal local des sub-agents)
+# Ottho Builder 2 (fichiers locaux du pipeline : journaux, verrous, brief temporaire)
 .claude/pipeline-events.jsonl
 .claude/ottho-answers-seen.json
 .claude/ottho-waiting
 .claude/ottho-builder.lock*
+.claude/ottho-builder.log
+.claude/brief-backups/
+.ottho-brief.json

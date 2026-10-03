@@ -97,4 +97,4 @@ L'utilisateur valide chaque livrable **dans le terminal** : PRD (`docs/PRD.md`),
 
 ## Fichiers de marque : glissés dans le terminal
 
-L'utilisateur glisse ses fichiers (logo, images, polices, charte en PDF, maquettes) dans le terminal Claude Code. **Copie-les dans `design/assets/`** en gardant leur nom (dossier créé au besoin ; un fichier du même nom n'est remplacé qu'avec son accord), puis **dis-le à `designer`** en listant les fichiers copiés dans sa demande : il lit ce dossier avant la charte. Image reçue sans son chemin : demande-lui le chemin du fichier pour le copier. Ottho Builder 2 les affiche dans « Éléments de marque ».
+L'utilisateur glisse ses fichiers (logo, images, polices, charte en PDF, maquettes) dans le terminal Claude Code. **Copie-les dans `design/assets/`** en gardant leur nom (dossier créé au besoin ; un fichier du même nom n'est remplacé qu'avec son accord), puis **dis-le à `designer`** en listant les fichiers copiés dans sa demande : il lit ce dossier avant la charte. Image reçue sans son chemin : demande à l'utilisateur le chemin du fichier pour la copier. Ottho Builder 2 les affiche dans « Éléments de marque ».
