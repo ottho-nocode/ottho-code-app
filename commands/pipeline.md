@@ -1,29 +1,34 @@
 ---
-description: Rouvre le pipeline visuel des agents dans le navigateur, ou explique comment le lancer
+description: Rouvre Ottho Builder 2, la vue du pipeline des agents, dans le navigateur
 ---
 
 # /pipeline
 
-Le pipeline (Ottho Builder 2) est une app locale : carte des agents, agent actif en direct, avancement de chaque `US-XX`, questions, validations, éléments de marque, et un terminal Claude Code intégré. Comme Claude Code peut tourner **dans** le pipeline, le pipeline ne doit dépendre d'aucune session Claude Code : il se lance dans un terminal ordinaire et y reste (Ctrl+C pour l'arrêter).
+Ottho Builder 2 est une app locale, en lecture seule : carte des agents, agent actif en direct, avancement de chaque `US-XX`, questions en attente, livrables à valider, éléments de marque. Elle s'ouvre d'elle-même au démarrage de Claude Code dans un projet Ottho (hook `SessionStart` du plugin) et s'arrête seule 30 min après la fermeture de son dernier onglet ; la session suivante la relance.
 
 ## Séquence
 
-1. Cherche une instance déjà ouverte pour ce projet, avec l'outil Bash (au premier plan) :
+1. Lance avec l'outil Bash, au premier plan, la commande « pour rouvrir la vue » donnée par le hook de démarrage dans le contexte de la session :
 
    ```bash
-   npx -y ottho-pipeline@1.0.0 --reopen --project "${CLAUDE_PROJECT_DIR:-$PWD}"
+   node "<dossier du plugin>/scripts/visual-engine.mjs" --open --project "<dossier du projet>"
    ```
 
-2. Si la sortie contient `Ottho Builder 2 déjà ouvert : http://127.0.0.1:<port>`, le navigateur s'est ouvert : redonne l'adresse à l'utilisateur.
-3. Sinon, **ne lance pas l'app toi-même** (une tâche de fond de cette session s'arrêterait avec elle). Explique à l'utilisateur d'ouvrir un terminal ordinaire (Terminal sur macOS, PowerShell sur Windows) et d'y taper :
+   Si le contexte ne la donne pas (dossier qui n'était pas encore un projet Ottho au démarrage de la session), lance :
 
    ```bash
-   cd "<dossier du projet>" && npx ottho-pipeline
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/visual-engine.mjs" --open --project "${CLAUDE_PROJECT_DIR:-$PWD}"
    ```
 
-   Le pipeline s'ouvre dans le navigateur ; le bouton « Terminal » y lance Claude Code dans le projet. Pour l'arrêter : Ctrl+C dans ce terminal.
+   Elle retrouve le Builder du projet, ou le démarre en processus détaché (il survit à la session), puis ouvre le navigateur.
+
+2. Redonne à l'utilisateur la ligne affichée :
+   - `Ottho Builder 2 : http://127.0.0.1:<port>` : l'adresse de la vue, déjà ouverte dans le navigateur ;
+   - `Ottho Builder 2 introuvable : …` : le Builder n'est pas installé, transmets la commande d'installation telle quelle ;
+   - `Ottho Builder 2 n'a pas démarré : …` : lis la fin de `.claude/ottho-builder.log` et explique la cause.
 
 ## Règles
 
-- Ne lance jamais le pipeline en tâche de fond depuis Claude Code.
-- La validation humaine entre les phases reste la règle : le pipeline aide à répondre, valider et envoyer le prompt suivant, l'utilisateur décide.
+- Les questions des agents et les validations se font dans ce terminal : l'app les affiche sans rien écrire, sauf son panneau Config (variables enregistrées dans `.env.local`).
+- La validation humaine entre les phases reste la décision de l'utilisateur : l'app montre où en est le pipeline, l'utilisateur valide ici, dans le terminal.
+- Ne lance pas le Builder autrement (pas de `npx ottho-pipeline` en tâche de fond de cette session) : la commande ci-dessus le détache proprement.

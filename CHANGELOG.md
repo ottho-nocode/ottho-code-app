@@ -6,6 +6,7 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Ajouté
 
+- **Ottho Builder 2 lancé au démarrage de Claude Code** (hook `SessionStart`, `scripts/visual-engine.mjs`) : retrouve le Builder du projet (ports 4317 à 4326) ou, dans un projet Ottho ou un dossier neuf, le démarre détaché (`--idle-exit 30`, journal `.claude/ottho-builder.log`) ; adresse affichée à l'utilisateur, commandes du brief et de réouverture données à Claude. `/pipeline` le rouvre (`visual-engine.mjs --open`) : plus de `npx ottho-pipeline` à lancer dans un terminal à part. Jamais bloquant.
 - **Choix « Suivre tes recos »** sur chaque question du sélecteur (`AskUserQuestion`, ajouté par `answered-guard` via `updatedInput`) : l'IA tranche selon sa recommandation et la consigne dans le livrable.
 
 - **Commande `/pipeline`** (6e commande) : rouvre l'app locale `ottho-pipeline` si elle tourne (`--reopen`), sinon explique comment la lancer dans un terminal ordinaire (`npx ottho-pipeline`) : l'app embarque un terminal Claude Code, elle ne doit donc pas dépendre d'une session Claude Code.
