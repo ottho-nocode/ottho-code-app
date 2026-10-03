@@ -15,7 +15,8 @@
 //   (marqueur .claude/ottho-waiting) : l'autorisation est donnée, l'app retire la notification ;
 //   answered : PostToolUse AskUserQuestion, réponses données dans le sélecteur du terminal
 //   (question et réponse, pour que l'app ne les laisse pas « en attente »).
-// inApp : la session tourne dans le terminal intégré du pipeline (OTTHO_PIPELINE_TERMINAL=1).
+// inApp : la session tourne dans le terminal intégré des anciennes versions d'Ottho Builder 2
+// (OTTHO_PIPELINE_TERMINAL=1) ; faux en pratique depuis son retrait (questions dans le CLI).
 // Pas de prompt ni de contenu de fichier. En fin d'exécution : les questions du bloc
 // « Questions pour toi » (10 au plus, 2 000 caractères chacune) et le compte rendu de
 // l'agent (8 000 caractères au plus, secrets reconnaissables masqués), consultables

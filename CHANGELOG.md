@@ -18,14 +18,16 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 - **Agent `tester`** : termine toujours par `Verdict tests : VERTS` ou `Verdict tests : ROUGES`.
 - **Agent `designer`** : maquettes dans Claude Design (outil `Artifact`) si le compte l'a, sinon Pencil (noms d'outils mis à jour pour le serveur Pencil actuel : `get_app_state`, `read_skill`, `get_style`, `execute`), sinon texte. Livrable `/design/US-XX-<slug>.md` avec la ligne `> Maquettes : …` ; copie des écrans du canevas dans `/design/US-XX-<slug>/` (aperçu dans `ottho-pipeline`).
 - **Agent `developer`** : lit les maquettes du designer (outil `Artifact` en lecture, ou serveur Pencil) et applique `/design/charte.md`.
-- **Éléments de marque** : `/design/assets/` (logo, images, polices, charte en PDF déposés depuis `ottho-pipeline`) ; lus par le designer (charte, assets du canevas) et repris par le développeur.
+- **Éléments de marque** : `/design/assets/` (logo, images, polices, charte en PDF glissés dans le terminal Claude Code, copiés par Claude ; Ottho Builder 2 les affiche) ; lus par le designer (charte, assets du canevas) et repris par le développeur.
 - **Charte graphique** : `/design/charte.md` (source, dans le dépôt) + design system Claude Design tiré d'elle et installé dans chaque canevas. Sans charte, le designer la demande toujours d'abord (couleurs, polices, logo, références) et s'arrête ; il n'en propose une que si l'utilisateur n'en a pas, puis attend sa validation avant toute maquette.
 - **Agent `spec-writer`** : questions ouvertes au format `- [ ] question ?`, reprise de `docs/questions/US-XX.md`, passage de main au format standard « Prochaine étape recommandée ».
 - **Template `.gitignore`** : ignore `.claude/pipeline-events.jsonl`.
 
-- **Questions du terminal central dans le pipeline** : hooks `Stop` (questions de fin de tour de la session principale : bloc « Questions pour toi », liste de questions ou dernière phrase interrogative), `UserPromptSubmit` (l'utilisateur a répondu, sans le contenu de son message) et `Notification` `permission_prompt` (Claude attend une autorisation). L'app les affiche en notification et peut envoyer la réponse au terminal intégré.
+- **Questions du terminal central dans le pipeline** : hooks `Stop` (questions de fin de tour de la session principale : bloc « Questions pour toi », liste de questions ou dernière phrase interrogative), `UserPromptSubmit` (l'utilisateur a répondu, sans le contenu de son message) et `Notification` `permission_prompt` (Claude attend une autorisation). L'app les affiche en notification ; l'utilisateur répond dans son terminal Claude Code.
 
-- **Brief du projet** : `brainstorming` part de `docs/brief.md` (onboarding d'Ottho Builder 2, canevas en six blocs du module « De l'idée au projet validé »), coche les critères de chaque bloc et ne pose que les questions qui manquent ; `spec-writer` s'en sert pour le PRD ; `project-bootstrap` le transmet, fait écrire `docs/architecture.md` et accepte la validation du PRD et de l'architecture faite dans le pipeline. Le modèle de PRD a une section « Historique ».
+- **Brief du projet** : écrit dans le terminal, étape 0 de `project-bootstrap` (exemple enregistré, ou les six blocs du canevas du module « De l'idée au projet validé » posés un par un, puis commande `brief` du Builder : `--list`, `--preset <nom>`, `--json <fichier>`). `brainstorming` part de `docs/brief.md`, coche les critères de chaque bloc et ne pose que les questions qui manquent ; `spec-writer` s'en sert pour le PRD ; `project-bootstrap` le transmet et fait écrire `docs/architecture.md`. Le modèle de PRD a une section « Historique ».
+
+- **Ottho Builder 2 en lecture seule** (seul son panneau Config écrit, dans `.env.local`) : les validations se donnent dans le terminal et Claude les consigne en fin de section « Historique » du livrable (`- AAAA-MM-JJ : Validé par l'utilisateur.`, lue par l'app) ; les fichiers de marque glissés dans le terminal sont copiés dans `design/assets/`. Skills `agency-method`, `project-bootstrap`, `sdd-feature-cycle`, agents `designer`, `brainstorming`, `spec-writer` et README mis à jour.
 
 ### Corrigé
 
@@ -33,12 +35,12 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 - **Après le PRD, spec-writer recommandait `architect`** (et le modèle de PRD aussi) : le designer était sauté. Il est désormais recommandé dès que le PRD est écrit (ou la spec d'une feature avec interface) : il demande ou propose la charte et les maquettes pendant la relecture du PRD ; `architect` vient ensuite.
 
-- **Le designer ne demandait jamais les maquettes existantes** : il les demande désormais avec la charte (liens Figma, Claude Design, Pencil, ou images et PDF déposés dans le pipeline) et part d'elles s'il y en a, au lieu de tout redessiner.
+- **Le designer ne demandait jamais les maquettes existantes** : il les demande désormais avec la charte (liens Figma, Claude Design, Pencil, ou images et PDF glissés dans le terminal) et part d'elles s'il y en a, au lieu de tout redessiner.
 
 - **Notification « Claude attend ton autorisation » qui restait affichée** : après une demande d'autorisation, le premier outil exécuté par la session principale journalise une reprise (`resume`, marqueur `.claude/ottho-waiting`).
 
 - **Le designer n'intervenait pas au démarrage d'un projet** : `project-bootstrap` et `/init-agency-project` passent en 5 étapes, avec `designer` (charte demandée d'abord, design system, maquettes des écrans clés) entre le PRD et l'architecture.
-- **Questions : un seul canal, le terminal** (plus de double réponse app / terminal). `PreToolUse` `AskUserQuestion` journalise les questions posées (Ottho Builder 2 ouvre le terminal) ; la méthode demande de consigner chaque réponse dans le livrable concerné.
+- **Questions : un seul canal, le terminal** (plus de double réponse app / terminal). `PreToolUse` `AskUserQuestion` journalise les questions posées (Ottho Builder 2 les affiche) ; la méthode demande de consigner chaque réponse dans le livrable concerné.
 
 - **Réponses données dans Ottho Builder 2 ignorées par la session principale** (elle lançait l'agent suivant avec ses propres hypothèses) : à chaque message de l'utilisateur, `answered-guard` ajoute au contexte les réponses consignées depuis le dernier tour, qui priment sur toute hypothèse. Chaque agent fait primer les réponses consignées sur les hypothèses de sa demande et signale les contradictions.
 

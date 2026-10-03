@@ -82,8 +82,19 @@ Le plugin n'installe aucun serveur MCP : chaque projet ajoute les siens dans son
 
 ## Questions à l'utilisateur : dans le terminal
 
-Les questions des agents se posent **dans le terminal** (Ottho Builder 2 les affiche et ouvre le terminal, sans champ de réponse). Quand l'utilisateur répond :
+Les questions des agents se posent **dans le terminal** : Ottho Builder 2 les affiche en lecture seule (pas de champ de réponse, pas de terminal intégré) et renvoie l'utilisateur ici. Quand l'utilisateur répond :
 - **consigne la réponse** dans le livrable concerné, section « Questions ouvertes » (case cochée, puis `  > Réponse (AAAA-MM-JJ) : …`) : spec pour une feature, `docs/PRD.md` au niveau projet, sinon `docs/questions/<US-XX ou projet>.md` ; c'est là que les agents suivants la lisent ;
 - **transmets-la** à l'agent suivant et ne la remplace jamais par une hypothèse ;
 - avant de reposer une question, **relis ces sections** : si elle y a déjà une réponse, reprends-la. Le hook `answered-guard` refuse d'ailleurs une question du sélecteur (`AskUserQuestion`) déjà répondue et te donne la réponse ;
 - chaque question du sélecteur reçoit aussi le choix **« Suivre tes recos »** (ajouté par `answered-guard`), et l'utilisateur peut l'écrire en toutes lettres (« suis tes recos »). Dans ce cas, **tranche toi-même** selon la recommandation de l'agent (ou la tienne, justifiée en une ligne) et consigne-la comme réponse : `> Réponse (date) : suivre la recommandation, <choix retenu>`. Donne donc toujours une recommandation par défaut avec tes questions.
+
+## Validations : dans le terminal
+
+L'utilisateur valide chaque livrable **dans le terminal** : PRD (`docs/PRD.md`), charte (`design/charte.md`), architecture (`docs/architecture.md`), spec (`specs/US-XX-<slug>.md`), maquettes (`design/US-XX-<slug>.md`), plan (`plans/US-XX-<slug>.md`). Ottho Builder 2 n'écrit rien : il lit l'état dans la section `## Historique` du livrable, validé quand la dernière entrée de sa liste dit « Validé par l'utilisateur ».
+- Sur son accord explicite (« je valide la spec », « OK pour le plan »), **ajoute à la fin de cette section** la ligne `- AAAA-MM-JJ : Validé par l'utilisateur.` (date du jour). Pas de section : crée `## Historique` en fin de fichier avec cette ligne.
+- **Ne valide jamais à sa place** : ni sur ton propre jugement, ni sur un silence, ni sur l'avis d'un agent.
+- Une entrée ajoutée ensuite (révision par un agent) annule la validation dans l'app : redemande-la.
+
+## Fichiers de marque : glissés dans le terminal
+
+L'utilisateur glisse ses fichiers (logo, images, polices, charte en PDF, maquettes) dans le terminal Claude Code. **Copie-les dans `design/assets/`** en gardant leur nom (dossier créé au besoin ; un fichier du même nom n'est remplacé qu'avec son accord), puis **dis-le à `designer`** en listant les fichiers copiés dans sa demande : il lit ce dossier avant la charte. Image reçue sans son chemin : demande-lui le chemin du fichier pour le copier. Ottho Builder 2 les affiche dans « Éléments de marque ».

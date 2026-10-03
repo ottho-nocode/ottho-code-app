@@ -88,13 +88,24 @@ Met à jour la doc, push, ouvre la PR vers `develop`.
 
 Lance `security-auditor` sur tout le projet (secrets, RLS + advisors Supabase, code mort) et écrit le rapport classé dans `/reviews/security-audit.md`. À dérouler avant une mise en ligne, avec le skill `security-checklist`.
 
-### Voir le pipeline
+### Voir le pipeline (Ottho Builder 2)
+
+Ottho Builder 2 s'ouvre tout seul dans le navigateur au démarrage de Claude Code, dans un projet Ottho ou un dossier vide (hook `SessionStart`, `scripts/visual-engine.mjs`). Il s'arrête 30 min après la fermeture de son dernier onglet ; la session suivante le relance. Pour le rouvrir :
 
 ```
 /pipeline
 ```
 
-Rouvre l'app locale Ottho Builder 2 dans le navigateur si elle tourne, sinon explique comment la lancer. Le pipeline se lance dans un terminal ordinaire, dans le dossier du projet : `npx ottho-pipeline` (Ctrl+C pour l'arrêter). On y voit la carte des agents, l'agent en cours et ce qu'il fait en direct, l'avancement de chaque `US-XX`, les questions des agents (réponse écrite dans la spec), les livrables à valider, les éléments de marque (logo, polices…), et un terminal Claude Code intégré (« Envoyer à Claude » y tape le prompt de l'étape suivante). Alimentée par les hooks `PreToolUse` / `PostToolUse` / `SubagentStop`, qui écrivent `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquants).
+C'est une vue **en lecture seule** : carte des agents, agent en cours et ce qu'il fait en direct, avancement de chaque `US-XX`, brief du projet, questions en attente, livrables à valider, éléments de marque (logo, polices…). Tout le reste se fait dans le terminal Claude Code :
+
+- **brief du projet** : Claude pose les six blocs du canevas (ou applique un exemple enregistré) et l'écrit dans `docs/brief.md` avec la commande `brief` du Builder ;
+- **questions des agents** : réponse dans le terminal, consignée par Claude dans le livrable (« Questions ouvertes ») ;
+- **validations** : « je valide le PRD » dans le terminal ; Claude ajoute `- AAAA-MM-JJ : Validé par l'utilisateur.` à l'« Historique » du livrable, que l'app lit ;
+- **fichiers de marque** : glissés dans le terminal, copiés par Claude dans `design/assets/`.
+
+Seul son panneau Config écrit : les variables d'environnement du projet, dans `.env.local`. La vue est alimentée par les hooks du plugin (`scripts/pipeline-event.mjs`), qui écrivent `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquants).
+
+Installation du Builder, une fois : `npx ottho-pipeline --install`. Elle permet au hook de le lancer et ajoute sur macOS l'app « Ottho Builder 2 » (à mettre dans le Dock ou la barre d'outils du Finder) : un clic ouvre Claude Code dans le dossier choisi, et le Builder s'ouvre avec.
 
 ---
 

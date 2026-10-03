@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Pont des réponses du plugin ottho-code-app : l'utilisateur répond aux questions des agents
-// dans Ottho Builder 2 (réponses consignées dans docs/questions/*.md, specs/*.md ou
-// docs/PRD.md, section « Questions ouvertes »), Claude doit les voir.
+// Pont des réponses du plugin ottho-code-app : réponses de l'utilisateur aux questions des
+// agents consignées dans les fichiers (par Claude, depuis le terminal) : docs/questions/*.md,
+// specs/*.md ou docs/PRD.md, section « Questions ouvertes ». Claude doit les voir.
 //   PreToolUse AskUserQuestion : question déjà répondue refusée, la réponse est donnée à Claude ;
 //   sinon, chaque question reçoit le choix « Suivre tes recos » (l'IA décide selon sa recommandation).
 //   UserPromptSubmit : les réponses données depuis le dernier message sont ajoutées au contexte

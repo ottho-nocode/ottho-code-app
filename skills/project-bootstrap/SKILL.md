@@ -14,11 +14,47 @@ Quand l'utilisateur demande à **démarrer un nouveau projet** / **init projet**
 
 ## Étapes
 
-### 0. Brief
+### 0. Brief du projet (canevas en 6 blocs)
 
-Si `docs/brief.md` existe (onboarding d'Ottho Builder 2, canevas en six blocs du module « De l'idée au projet validé »), annonce-le et transmets-le à `brainstorming` : il vérifie chaque bloc avec ses critères, challenge ce qui ne passe pas et ne pose que les questions qui manquent. Sinon, `brainstorming` construit le cadrage par questions.
+Le brief `docs/brief.md` suit le canevas en six blocs du module « De l'idée au projet validé » (formation Claude Builder). Il se remplit **ici, dans le terminal**, avant `brainstorming` ; Ottho Builder 2 l'affiche en lecture seule.
 
-**Validations dans Ottho Builder 2** : l'utilisateur peut valider le PRD et l'architecture dans l'app (entrée « Validé par l'utilisateur (Ottho Builder 2) » dans leur « Historique »). Un message du type « Le PRD est validé dans le pipeline » vaut validation : passe à l'étape suivante.
+**La commande du brief** est donnée par le hook de démarrage dans le contexte de la session (« Pour écrire le brief du projet ») : `'<node>' '<cli>' brief --project '<dossier du projet>'` suivi d'**une seule** option, `--list`, `--preset <nom>` ou `--json <fichier>`. Lance-la avec l'outil Bash, telle quelle (chemins déjà échappés), depuis le dossier du projet. Absente du contexte : compose-la avec `~/.ottho-pipeline/engine.json` (`{ "node": …, "cli": … }`). Fichier absent : le Builder n'est pas installé ; dis-le, propose `npx ottho-pipeline --install`, et laisse `brainstorming` faire le cadrage par questions.
+
+1. **`docs/brief.md` complet** (nom du projet et premier champ de chaque bloc remplis ; données dans le commentaire `<!-- ottho-brief {…} -->` en fin de fichier) : annonce-le et passe directement à la transmission ci-dessous.
+2. **Pas de brief** : propose d'abord les exemples enregistrés. Lance la commande avec `--list` (une ligne `slug<TAB>nom` par exemple, ou « Aucun exemple de brief enregistré. »). L'utilisateur en choisit un (Haircut, par exemple) : lance-la avec `--preset <slug>`, puis va au point 5.
+3. **Sinon** (aucun exemple choisi, ou brief incomplet) : demande le nom du projet, puis pose les 6 blocs **un par message**, avec leur titre, leur consigne et leurs champs (tableau ci-dessous). Brief incomplet : repars de ses données (commentaire en fin de fichier) et ne pose que les blocs manquants. Le choix « Suivre tes recos » reste disponible (sélecteur, ou « suis tes recos » en toutes lettres) : propose alors toi-même le contenu du bloc, justifié en une ligne, et dis-le ; pour une persona que tu proposes, `interviews` vaut 0. Ne vérifie pas les critères des blocs : c'est le travail de `brainstorming`.
+
+   | Bloc (clé) | Consigne | Champs (clé : libellé) |
+   |---|---|---|
+   | Le domaine (`domaine`) | Le terrain que tu apprécies ou maîtrises. | `domaine` : ton domaine / thème ; `legitimite` : ta légitimité (langage maîtrisé, audience connue, unfair advantage) |
+   | Le problème (`probleme`) | Un problème dur : douloureux, urgent, récurrent, et conscient. | `description` : le problème ; `vecu` : l'as-tu vécu toi-même ? ; `autres` : qui d'autre le vit (nommé) ? |
+   | La cible quantifiable (`cible`) | 5-10% d'un marché, 100k-1M de personnes, déjà en recherche. | `marche` : marché visé ; `pourcentage` : % du marché concerné ; `volume` : volume estimé (personnes) ; `recherche` : comment cherchent-ils déjà une solution ? |
+   | La persona (`persona`, liste de 1 à 5) | Inventée puis comparée à de vrais utilisateurs. Plusieurs, jamais une seule. | `identite` : identité (prénom, âge, rôle, lieu) ; `contexte` : contexte (personnel / pro / techno) ; `objectifs` : 3 objectifs prioritaires ; `freins` : freins / craintes ; `techno` : profil techno ; `interviews` : nombre de personnes interviewées |
+   | La solution (`solution`) | Réalisable, formulée Modèle + Action + Comment. | `modele` : modèle (automatisation, mise en relation…) ; `action` : action ; `comment` : comment |
+   | La phrase de valeur, Steve Blank (`uvp`) | J'aide [cible] à résoudre [problème] grâce à [solution]. | `phrase` : ta phrase (« J'aide … à résoudre … grâce à … ») |
+
+4. **Écris les réponses** dans `.claude/brief.json`, avec exactement ces clés (champ sans réponse : `""`), puis lance la commande avec `--json .claude/brief.json` :
+
+   ```json
+   {
+     "name": "Nom du projet",
+     "domaine": { "domaine": "", "legitimite": "" },
+     "probleme": { "description": "", "vecu": "", "autres": "" },
+     "cible": { "marche": "", "pourcentage": "", "volume": "", "recherche": "" },
+     "persona": [
+       { "identite": "", "contexte": "", "objectifs": "", "freins": "", "techno": "", "interviews": 0 }
+     ],
+     "solution": { "modele": "", "action": "", "comment": "" },
+     "uvp": { "phrase": "" }
+   }
+   ```
+
+   Valeurs en texte (nombre accepté pour `interviews`) ; 300 caractères au plus pour `name`, `domaine.domaine`, `marche`, `pourcentage`, `volume`, `identite`, `interviews`, `modele`, `action` et `comment`, 5 000 pour les autres champs ; 5 personas au plus. Une autre clé est ignorée.
+5. **Rends compte** : la commande affiche `<dossier>/docs/brief.md écrit (complet).` ou `… écrit (incomplet : <blocs manquants>).` Redonne-le à l'utilisateur ; incomplet, nomme ce qui manque et propose de le compléter maintenant (sinon `brainstorming` posera les questions qui manquent). Un refus (champ invalide, brief rempli jamais remplacé par un brief vide) s'explique de lui-même : corrige le JSON et relance. La version remplacée est sauvegardée dans `.claude/brief-backups/`.
+
+Puis transmets `docs/brief.md` à `brainstorming` : il vérifie chaque bloc avec ses critères, challenge ce qui ne passe pas et ne pose que les questions qui manquent. Sans brief, `brainstorming` construit le cadrage par questions.
+
+**Validations dans le terminal** : l'utilisateur valide le PRD, la charte et l'architecture ici, dans le terminal ; Ottho Builder 2 ne fait qu'afficher leur état. Sur son accord explicite (« je valide le PRD »), ajoute à la fin de la section `## Historique` du livrable la ligne `- AAAA-MM-JJ : Validé par l'utilisateur.` (section créée en fin de fichier si elle manque), puis passe à l'étape suivante. Ne valide jamais à sa place (voir `agency-method`, « Validations »).
 
 ### 1. Cadrage initial — `brainstorming`
 
@@ -46,7 +82,7 @@ Invoquer `spec-writer` (niveau projet) :
 - Charte graphique `/design/charte.md` : il la **demande toujours d'abord** à l'utilisateur (couleurs, polices, logo, références) et s'arrête ; il n'en propose une que si l'utilisateur n'en a pas
 - Puis design system de base (tokens, typographie, composants atomiques) et maquettes des écrans clés du parcours principal du MVP (`/design/projet/`)
 
-**STOP** — validation humaine de la charte (dans le terminal ou dans Ottho Builder 2). Projet sans interface : étape sautée, dis-le.
+**STOP** : validation humaine de la charte, dans le terminal, consignée dans l'« Historique » de `/design/charte.md`. Projet sans interface : étape sautée, dis-le.
 
 ### 4. Architecture initiale — `architect`
 
