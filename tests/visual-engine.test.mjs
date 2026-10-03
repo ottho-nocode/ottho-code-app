@@ -2,13 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, utimes, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { NOT_FOUND, NOT_STARTED, PORTS, engineOf, isOtthoProject, main, parsePorts } from "../scripts/visual-engine.mjs";
+import { NOT_FOUND, NOT_STARTED, PORTS, STARTING, STARTING_NO_OPEN, engineOf, isOtthoProject, main, parsePorts } from "../scripts/visual-engine.mjs";
 
 const SCRIPT = fileURLToPath(new URL("../scripts/visual-engine.mjs", import.meta.url));
 const PLUGIN = dirname(dirname(SCRIPT));
@@ -27,13 +27,13 @@ async function freePort() {
   return port;
 }
 
-// Faux Builder dans ce processus : répond au health pour project.
-async function fakeBuilder(project) {
+// Faux Builder dans ce processus : répond au health pour project (port 0 : port libre au hasard).
+async function fakeBuilder(project, wanted = 0) {
   const server = createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, app: "ottho-pipeline", project }));
   });
-  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  await new Promise((r) => server.listen(wanted, "127.0.0.1", r));
   const { port } = server.address();
   assertTestPort(port);
   return {
@@ -46,23 +46,25 @@ async function fakeBuilder(project) {
   };
 }
 
-// Fausse CLI du Builder : note ses arguments, écoute sur FAKE_PORT et répond au health pour son
-// --project ; FAKE_MODE=crash : s'arrête aussitôt en erreur.
+// Fausse CLI du Builder : ajoute une ligne par lancement (arguments, pid, dossier), écoute sur
+// FAKE_PORT et répond au health pour son --project. FAKE_MODE=crash : s'arrête aussitôt en
+// erreur ; FAKE_MODE=silent : reste en vie sans jamais répondre.
 const FAKE_CLI = `import { createServer } from "node:http";
-import { writeFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 const argv = process.argv.slice(2);
-writeFileSync(process.env.FAKE_RECORD, JSON.stringify({ argv, pid: process.pid, cwd: process.cwd() }));
+appendFileSync(process.env.FAKE_RECORD, JSON.stringify({ argv, pid: process.pid, cwd: process.cwd() }) + "\\n");
 console.log("faux Builder");
+setTimeout(() => process.exit(0), 20000); // filet : jamais de processus orphelin durable
 if (process.env.FAKE_MODE === "crash") {
   console.error("faux Builder : échec");
   process.exit(1);
 }
+if (process.env.FAKE_MODE === "silent") await new Promise(() => {});
 const project = argv[argv.indexOf("--project") + 1];
 createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ ok: true, app: "ottho-pipeline", project }));
 }).listen(Number(process.env.FAKE_PORT), "127.0.0.1");
-setTimeout(() => process.exit(0), 20000); // filet : jamais de processus orphelin durable
 `;
 
 // Projet temporaire (files : chemin → contenu, null pour un dossier), faux home, fausse CLI.
@@ -84,17 +86,26 @@ async function setup(t, { files = {}, mode } = {}) {
   const env = { HOME: root, OTTHO_PIPELINE_HOME: home, OTTHO_PIPELINE_CLI: cli, CLAUDE_PROJECT_DIR: dir, FAKE_RECORD: record, FAKE_PORT: String(port) };
   if (mode) env.FAKE_MODE = mode;
   t.after(() => {
-    try {
-      process.kill(JSON.parse(readFileSync(record, "utf8")).pid);
-    } catch {
-      // jamais lancée, ou déjà arrêtée
+    for (const { pid } of launches({ record })) {
+      try {
+        process.kill(pid);
+      } catch {
+        // déjà arrêtée
+      }
     }
   });
   return { root, dir, home, cli, record, port, env };
 }
 
-const sessionStart = (cwd) => JSON.stringify({ session_id: "s1", hook_event_name: "SessionStart", source: "startup", cwd });
-const recorded = (ctx) => JSON.parse(readFileSync(ctx.record, "utf8"));
+const sessionStart = (cwd, source = "startup") => JSON.stringify({ session_id: "s1", hook_event_name: "SessionStart", source, cwd });
+// Lancements de la fausse CLI (une ligne chacun) ; le premier.
+const launches = (ctx) => (existsSync(ctx.record) ? readFileSync(ctx.record, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
+const recorded = (ctx) => {
+  const all = launches(ctx);
+  assert.equal(all.length, 1, `lancements de la fausse CLI : ${all.length}`);
+  return all[0];
+};
+const lockOf = (ctx) => join(ctx.dir, ".claude", "ottho-builder.lock");
 
 // Le script lancé comme par Claude Code : stdin, stdout, stderr, code de sortie.
 function runScript(args, { input = "", env, cwd }) {
@@ -151,6 +162,7 @@ test("Builder absent, projet Ottho : la CLI est lancée détachée, journal dans
   assert.deepEqual(argv, ["--project", ctx.dir, "--plugin", PLUGIN, "--idle-exit", "30"]);
   assert.equal(cwd, realpathSync(ctx.dir));
   assert.match(readFileSync(join(ctx.dir, ".claude", "ottho-builder.log"), "utf8"), /faux Builder/);
+  assert.ok(!existsSync(lockOf(ctx)), "verrou retiré une fois le Builder prêt");
 });
 
 test("dossier qui n'est pas un projet Ottho : rien n'est lancé ni affiché (un Builder d'un autre projet est ignoré)", async (t) => {
@@ -219,6 +231,64 @@ test("--open, Builder absent hors projet Ottho : lancé quand même, il ouvre lu
   assert.equal(recorded(ctx).argv[1], ctx.dir);
   // Introuvable : la ligne d'installation.
   assert.equal(await main({ argv: ["--open", "--project", ctx.dir], env: { HOME: ctx.root, OTTHO_PIPELINE_HOME: ctx.home }, ports: [await freePort()], open: (u) => opened.push(u) }), `${NOT_FOUND}\n`);
+});
+
+test("deux hooks simultanés du même projet : un seul lancement, la même adresse pour les deux", async (t) => {
+  const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
+  const run = () => main({ stdin: sessionStart(ctx.dir), env: ctx.env, ports: [ctx.port] });
+  const [a, b] = (await Promise.all([run(), run()])).map((out) => JSON.parse(out));
+  const url = `http://127.0.0.1:${ctx.port}`;
+  assert.equal(a.systemMessage, `Ottho Builder 2 : ${url}`);
+  assert.equal(b.systemMessage, `Ottho Builder 2 : ${url}`);
+  recorded(ctx); // un seul lancement
+  assert.ok(!existsSync(lockOf(ctx)));
+});
+
+test("verrou récent d'un autre hook : pas de lancement, attend le Builder qui arrive", async (t) => {
+  const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
+  await mkdir(join(ctx.dir, ".claude"), { recursive: true });
+  await writeFile(lockOf(ctx), "");
+  let builder;
+  const late = new Promise((r) => setTimeout(r, 500)).then(async () => (builder = await fakeBuilder(ctx.dir, ctx.port)));
+  t.after(async () => {
+    await late;
+    await builder?.close();
+  });
+  const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir), env: ctx.env, ports: [ctx.port] }));
+  assert.equal(out.systemMessage, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}`);
+  assert.deepEqual(launches(ctx), []);
+  assert.ok(existsSync(lockOf(ctx)), "le verrou de l'autre hook n'est pas touché");
+});
+
+test("verrou ancien (hook interrompu) : repris, le Builder est lancé, verrou retiré", async (t) => {
+  const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
+  await mkdir(join(ctx.dir, ".claude"), { recursive: true });
+  await writeFile(lockOf(ctx), "");
+  const old = new Date(Date.now() - 60_000);
+  await utimes(lockOf(ctx), old, old);
+  const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir), env: ctx.env, ports: [ctx.port] }));
+  assert.equal(out.systemMessage, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}`);
+  recorded(ctx);
+  assert.ok(!existsSync(lockOf(ctx)));
+});
+
+test("source compact ou clear : lancé avec --no-open ; startup et resume ouvrent le navigateur", async (t) => {
+  for (const [source, noOpen] of [["compact", true], ["clear", true], ["resume", false], [undefined, false]]) {
+    const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
+    const stdin = JSON.stringify({ hook_event_name: "SessionStart", cwd: ctx.dir, ...(source ? { source } : {}) });
+    const out = JSON.parse(await main({ stdin, env: ctx.env, ports: [ctx.port] }));
+    assert.equal(out.systemMessage, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}`);
+    assert.equal(recorded(ctx).argv.includes("--no-open"), noOpen, `source ${source}`);
+  }
+});
+
+test("Builder lancé qui ne répond pas dans le délai : « démarre encore » (variante sans navigateur sur compact)", async (t) => {
+  for (const [source, message] of [["startup", STARTING], ["compact", STARTING_NO_OPEN]]) {
+    const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" }, mode: "silent" });
+    const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir, source), env: ctx.env, ports: [ctx.port], waitMs: 800 }));
+    assert.deepEqual(out, { systemMessage: message });
+    assert.ok(!existsSync(lockOf(ctx)), "verrou retiré au bout du délai");
+  }
 });
 
 test("Builder lancé qui s'arrête aussitôt : message « n'a pas démarré », sans attendre tout le délai", async (t) => {

@@ -5,6 +5,9 @@
 //   ?project= le garde en vie). Sinon, dans un projet Ottho ou un dossier encore vide, le démarre
 //   détaché : node <cli> --project <dossier> --plugin <plugin> --idle-exit 30 (il s'arrête seul
 //   30 min après la fermeture de son dernier onglet), journal dans .claude/ottho-builder.log.
+//   Verrou .claude/ottho-builder.lock : deux hooks simultanés du même projet (deux sessions, ou le
+//   plugin chargé deux fois) ne lancent qu'un Builder, l'autre attend qu'il réponde.
+//   source compact ou clear : lancé avec --no-open (pas de navigateur en pleine session).
 //   Chemin du Builder : OTTHO_PIPELINE_CLI (tests), sinon <home>/engine.json, écrit par chaque
 //   lancement d'ottho-pipeline (home : OTTHO_PIPELINE_HOME ou ~/.ottho-pipeline).
 //   Sortie : systemMessage (adresse, pour l'utilisateur), additionalContext (pour Claude).
@@ -13,7 +16,7 @@
 // --project <dossier> remplace le dossier de la session ; --ports a-b : autres ports (tests).
 // Jamais bloquant : toute erreur → sortie 0, rien sur stderr.
 import { spawn } from "node:child_process";
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -24,11 +27,14 @@ const PLUGIN_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const WAIT_MS = 8000;
 const POLL_MS = 250;
 const PROBE_MS = 800;
+const LOCK_FRESH_MS = 15_000;
 // Fichiers qui signent un projet Ottho (specs : dossier).
 const MARKERS = [".claude/pipeline-events.jsonl", "docs/brief.md", "docs/PRD.md", "design/charte.md"];
 
 export const NOT_FOUND = "Ottho Builder 2 introuvable : installe-le (npx ottho-pipeline --install) pour voir le pipeline.";
 export const NOT_STARTED = "Ottho Builder 2 n'a pas démarré : voir .claude/ottho-builder.log.";
+export const STARTING = "Ottho Builder 2 démarre encore : il s'ouvrira dans le navigateur (sinon voir .claude/ottho-builder.log).";
+export const STARTING_NO_OPEN = "Ottho Builder 2 démarre encore : /pipeline l'ouvrira dans le navigateur (sinon voir .claude/ottho-builder.log).";
 
 // Projet Ottho (un marqueur) ou dossier neuf (rien d'autre que des fichiers cachés).
 export function isOtthoProject(dir) {
@@ -78,12 +84,34 @@ export async function findBuilder(dir, ports) {
   return port ? `http://127.0.0.1:${port}` : null;
 }
 
+// Verrou de lancement : true si ce hook le prend, false si un autre hook lance déjà le Builder.
+// Un verrou de plus de 15 s (hook interrompu avant de le retirer) est repris.
+function takeLock(lock) {
+  mkdirSync(dirname(lock), { recursive: true });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      closeSync(openSync(lock, "wx"));
+      return true;
+    } catch (err) {
+      if (err?.code !== "EEXIST") throw err;
+    }
+    try {
+      if (Date.now() - statSync(lock).mtimeMs < LOCK_FRESH_MS) return false;
+      rmSync(lock, { force: true });
+    } catch {
+      // verrou retiré entre-temps : nouvel essai
+    }
+  }
+  return false;
+}
+
 // Builder détaché (il survit à la session), sorties dans .claude/ottho-builder.log.
-function launch({ engine, dir, pluginRoot, env, spawnFn }) {
+function launch({ engine, dir, pluginRoot, env, spawnFn, noOpen }) {
   mkdirSync(join(dir, ".claude"), { recursive: true });
   const fd = openSync(join(dir, ".claude", "ottho-builder.log"), "w");
   try {
-    const child = spawnFn(engine.node, [engine.cli, "--project", dir, "--plugin", pluginRoot, "--idle-exit", "30"], {
+    const args = [engine.cli, "--project", dir, "--plugin", pluginRoot, "--idle-exit", "30", ...(noOpen ? ["--no-open"] : [])];
+    const child = spawnFn(engine.node, args, {
       cwd: dir,
       env,
       detached: true,
@@ -99,7 +127,8 @@ function launch({ engine, dir, pluginRoot, env, spawnFn }) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Attend que le Builder réponde pour ce projet ; abandonne s'il s'arrête ou au bout de ms.
+// Attend que le Builder réponde pour ce projet ; abandonne s'il s'arrête (exited) ou au bout de ms.
+// child null : lancé par un autre hook, seul le délai compte.
 async function waitBuilder(dir, ports, child, ms) {
   let exited = false;
   child?.on?.("exit", () => (exited = true));
@@ -108,7 +137,7 @@ async function waitBuilder(dir, ports, child, ms) {
   for (;;) {
     const last = exited;
     const url = await findBuilder(dir, ports);
-    if (url || last || Date.now() >= deadline) return url;
+    if (url || last || Date.now() >= deadline) return { url, exited };
     await sleep(POLL_MS);
   }
 }
@@ -165,6 +194,8 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
   const dir = resolve(cwd, given);
   const probed = (typeof values.ports === "string" && parsePorts(values.ports)) || ports;
   const pluginRoot = resolve(env.CLAUDE_PLUGIN_ROOT || PLUGIN_ROOT);
+  // Contexte compacté ou effacé en pleine session : pas de navigateur qui surgit.
+  const noOpen = !force && (payload.source === "compact" || payload.source === "clear");
   const say = (systemMessage, additionalContext) => {
     if (force) return `${systemMessage}\n`;
     return JSON.stringify(additionalContext ? { systemMessage, hookSpecificOutput: { hookEventName: "SessionStart", additionalContext } } : { systemMessage });
@@ -183,14 +214,27 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
   } else {
     if (!force && !isOtthoProject(dir)) return "";
     if (!engine) return say(NOT_FOUND);
-    let child;
+    const lock = join(dir, ".claude", "ottho-builder.lock");
+    let mine = false;
+    let waited;
     try {
-      child = launch({ engine, dir, pluginRoot, env, spawnFn });
-    } catch {
-      return say(NOT_STARTED);
+      let child = null;
+      try {
+        mine = takeLock(lock);
+        if (mine) child = launch({ engine, dir, pluginRoot, env, spawnFn, noOpen });
+      } catch {
+        return say(NOT_STARTED);
+      }
+      waited = await waitBuilder(dir, probed, child, waitMs);
+    } finally {
+      try {
+        if (mine) rmSync(lock, { force: true });
+      } catch {
+        // verrou resté : repris au-delà de 15 s
+      }
     }
-    url = await waitBuilder(dir, probed, child, waitMs);
-    if (!url) return say(NOT_STARTED);
+    url = waited.url;
+    if (!url) return say(waited.exited ? NOT_STARTED : noOpen ? STARTING_NO_OPEN : STARTING);
   }
   return say(`Ottho Builder 2 : ${url}`, contextFor({ url, engine, dir, pluginRoot }));
 }

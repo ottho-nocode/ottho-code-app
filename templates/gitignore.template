@@ -72,3 +72,4 @@ Desktop.ini
 .claude/pipeline-events.jsonl
 .claude/ottho-answers-seen.json
 .claude/ottho-waiting
+.claude/ottho-builder.lock
