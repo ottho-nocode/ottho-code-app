@@ -193,7 +193,7 @@ test("dossier neuf (fichiers cachés seulement) : lancé ; engine.json au node d
   assert.ok(context.includes(`node '${join(plugin, "scripts", "visual-engine.mjs")}' --open`));
 });
 
-test("Builder introuvable (ni OTTHO_PIPELINE_CLI ni engine.json) : message d'installation, code 0", async (t) => {
+test("Builder introuvable (ni OTTHO_PIPELINE_CLI ni engine.json) : message d'enregistrement (--install), code 0", async (t) => {
   const ctx = await setup(t, { files: { specs: null } });
   const res = await runScript(["--ports", String(ctx.port)], { input: sessionStart(ctx.dir), env: { HOME: ctx.root, OTTHO_PIPELINE_HOME: ctx.home }, cwd: ctx.root });
   assert.equal(res.code, 0);
@@ -235,7 +235,7 @@ test("--open, Builder absent hors projet Ottho : lancé quand même, il ouvre lu
   assert.equal(out, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}\n`);
   assert.deepEqual(opened, []);
   assert.equal(recorded(ctx).argv[1], ctx.dir);
-  // Introuvable : la ligne d'installation.
+  // Introuvable : la ligne d'enregistrement (--install).
   assert.equal(await main({ argv: ["--open", "--project", ctx.dir], env: { HOME: ctx.root, OTTHO_PIPELINE_HOME: ctx.home }, ports: [await freePort()], open: (u) => opened.push(u) }), `${NOT_FOUND}\n`);
 });
 

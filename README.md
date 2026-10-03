@@ -105,7 +105,7 @@ C'est une vue **en lecture seule** : carte des agents, agent en cours et ce qu'i
 
 Seul son panneau Config écrit : les variables d'environnement du projet, dans `.env.local`. La vue est alimentée par les hooks du plugin (`scripts/pipeline-event.mjs`), qui écrivent `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquants).
 
-Installation du Builder, une fois : `npx ottho-pipeline --install`. Elle permet au hook de le lancer et ajoute sur macOS l'app « Ottho Builder 2 » (à mettre dans le Dock ou la barre d'outils du Finder) : un clic ouvre Claude Code dans le dossier choisi, et le Builder s'ouvre avec.
+Une fois, `npx ottho-pipeline --install` enregistre Ottho Builder 2 pour le plugin (`~/.ottho-pipeline/engine.json`, lu par le hook) ; tout lancement à la main du Builder (`npx ottho-pipeline`) l'enregistre aussi.
 
 ---
 

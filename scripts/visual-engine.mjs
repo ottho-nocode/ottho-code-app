@@ -9,8 +9,9 @@
 //   plugin chargé deux fois) ne lancent qu'un Builder, l'autre attend qu'il réponde.
 //   Verrou ancien (plus de 15 s) repris par un seul hook à la fois (.claude/ottho-builder.lock.break).
 //   source compact ou clear : lancé avec --no-open (pas de navigateur en pleine session).
-//   Chemin du Builder : OTTHO_PIPELINE_CLI (tests), sinon <home>/engine.json, écrit par chaque
-//   lancement d'ottho-pipeline (home : OTTHO_PIPELINE_HOME ou ~/.ottho-pipeline).
+//   Chemin du Builder : OTTHO_PIPELINE_CLI (tests), sinon <home>/engine.json, écrit par
+//   ottho-pipeline --install (une fois) et par chaque lancement d'ottho-pipeline
+//   (home : OTTHO_PIPELINE_HOME ou ~/.ottho-pipeline).
 //   Sortie : systemMessage (adresse, pour l'utilisateur), additionalContext (pour Claude).
 // --open (commande /pipeline) : sans la garde du dossier, ouvre le navigateur si le Builder
 // tournait déjà (un Builder qui démarre l'ouvre lui-même), sortie en une ligne de texte.
@@ -33,7 +34,7 @@ const LOCK_FRESH_MS = 15_000;
 // Fichiers qui signent un projet Ottho (specs : dossier).
 const MARKERS = [".claude/pipeline-events.jsonl", "docs/brief.md", "docs/PRD.md", "design/charte.md"];
 
-export const NOT_FOUND = "Ottho Builder 2 introuvable : installe-le (npx ottho-pipeline --install) pour voir le pipeline.";
+export const NOT_FOUND = "Ottho Builder 2 introuvable : enregistre-le une fois (npx ottho-pipeline --install) pour voir le pipeline.";
 export const NOT_STARTED = "Ottho Builder 2 n'a pas démarré : voir .claude/ottho-builder.log.";
 export const STARTING = "Ottho Builder 2 démarre encore : il s'ouvrira dans le navigateur (sinon voir .claude/ottho-builder.log).";
 export const STARTING_NO_OPEN = "Ottho Builder 2 démarre encore : /pipeline l'ouvrira dans le navigateur (sinon voir .claude/ottho-builder.log).";

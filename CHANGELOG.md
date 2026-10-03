@@ -29,6 +29,10 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 - **Ottho Builder 2 en lecture seule** (seul son panneau Config écrit, dans `.env.local`) : les validations se donnent dans le terminal et Claude les consigne en fin de section « Historique » du livrable (`- AAAA-MM-JJ : Validé par l'utilisateur.`, lue par l'app) ; les fichiers de marque glissés dans le terminal sont copiés dans `design/assets/`. Skills `agency-method`, `project-bootstrap`, `sdd-feature-cycle`, agents `designer`, `brainstorming`, `spec-writer` et README mis à jour.
 
+### Retiré
+
+- **App du Dock retirée** (« Ottho Builder 2 » dans `~/Applications`) : le hook de démarrage ouvre déjà le Builder dans un projet Ottho, `/pipeline` le rouvre. `npx ottho-pipeline --install` enregistre seulement Ottho Builder 2 pour le plugin (une fois) et signale une ancienne app, à supprimer à la main.
+
 ### Corrigé
 
 - **Maquettes : Claude Design uniquement** (Pencil retiré de `designer` et `developer`). La session principale lance `designer` au premier plan : la publication du canevas demande l'autorisation de l'utilisateur, et le canevas s'ouvre dans son navigateur (en arrière-plan, elle était refusée). Consignes pour le niveau projet (canevas « <Projet> : écrans clés », copie dans `design/projet/`) ; sans `Artifact` ou publication refusée, canevas prêt à publier (`*.dc.html` + `canvas.json`) et demande de publication à la session principale, jamais de Pencil ni de page HTML unique.
