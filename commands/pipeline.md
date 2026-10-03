@@ -26,7 +26,8 @@ Ottho Builder 2 est une app locale, en lecture seule : carte des agents, agent a
    - `Ottho Builder 2 : http://127.0.0.1:<port>` : l'adresse de la vue, déjà ouverte dans le navigateur ;
    - `Ottho Builder 2 introuvable : …` : le Builder n'est pas installé, transmets la commande d'installation telle quelle ;
    - `Ottho Builder 2 démarre encore : …` : il finit de démarrer et s'ouvrira de lui-même ; si rien ne vient, lis la fin de `.claude/ottho-builder.log` ;
-   - `Ottho Builder 2 n'a pas démarré : …` : lis la fin de `.claude/ottho-builder.log` et explique la cause.
+   - `Ottho Builder 2 n'a pas démarré : …` : lis la fin de `.claude/ottho-builder.log` et explique la cause ;
+   - `Ottho Builder 2 : dossier de projet introuvable : <dossier>` : le chemin passé à `--project` n'existe pas ; vérifie-le (faute de frappe, dossier déplacé) avec l'utilisateur, puis relance avec le bon chemin.
 
 ## Règles
 

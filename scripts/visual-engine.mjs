@@ -7,6 +7,7 @@
 //   30 min après la fermeture de son dernier onglet), journal dans .claude/ottho-builder.log.
 //   Verrou .claude/ottho-builder.lock : deux hooks simultanés du même projet (deux sessions, ou le
 //   plugin chargé deux fois) ne lancent qu'un Builder, l'autre attend qu'il réponde.
+//   Verrou ancien (plus de 15 s) repris par un seul hook à la fois (.claude/ottho-builder.lock.break).
 //   source compact ou clear : lancé avec --no-open (pas de navigateur en pleine session).
 //   Chemin du Builder : OTTHO_PIPELINE_CLI (tests), sinon <home>/engine.json, écrit par chaque
 //   lancement d'ottho-pipeline (home : OTTHO_PIPELINE_HOME ou ~/.ottho-pipeline).
@@ -17,7 +18,7 @@
 // Jamais bloquant : toute erreur → sortie 0, rien sur stderr.
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync } from "node:fs";
+import { closeSync, existsSync, linkSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -94,46 +95,85 @@ const removeQuietly = (path) => {
   }
 };
 
+const isFresh = (st) => Date.now() - st.mtimeMs < LOCK_FRESH_MS;
+
+// Fichier créé seulement s'il n'existe pas : true si ce hook l'a créé.
+function createExclusive(path) {
+  try {
+    closeSync(openSync(path, "wx"));
+    return true;
+  } catch (err) {
+    if (err?.code !== "EEXIST") throw err;
+    return false;
+  }
+}
+
+// Verrou de reprise (<verrou>.break) : un seul hook à la fois reprend un verrou ancien. Laissé
+// par un hook tué en pleine reprise : retiré au bout de 15 s, puis repris.
+function takeBreak(path) {
+  if (createExclusive(path)) return true;
+  try {
+    if (isFresh(statSync(path))) return false;
+  } catch {
+    // retiré entre-temps
+  }
+  removeQuietly(path);
+  return createExclusive(path);
+}
+
 // Verrou de lancement : true si ce hook le prend, false si un autre hook lance déjà le Builder.
-// Un verrou de plus de 15 s (hook interrompu, Builder lent) est repris : renommé d'abord (un seul
-// hook y parvient), et rendu si c'était entre-temps le verrou récent d'un autre hook.
+// Un verrou de plus de 15 s (hook interrompu, Builder lent) est repris, par un seul hook à la fois
+// (verrou de reprise) : sinon un hook qui reprend pourrait retirer le verrou neuf d'un autre et
+// laisser un troisième en créer un, d'où deux lancements. Sous ce verrou : renommé d'abord, et rendu
+// par un lien (échoue si le chemin est pris, jamais par-dessus un verrou neuf) si c'était en fait
+// un verrou récent.
 function takeLock(lock) {
   mkdirSync(dirname(lock), { recursive: true });
+  const breaker = `${lock}.break`;
   for (let attempt = 0; attempt < 3; attempt++) {
+    if (createExclusive(lock)) return true;
     try {
-      closeSync(openSync(lock, "wx"));
-      return true;
-    } catch (err) {
-      if (err?.code !== "EEXIST") throw err;
-    }
-    let seen;
-    try {
-      seen = statSync(lock);
+      if (isFresh(statSync(lock))) return false;
     } catch {
       continue; // retiré entre-temps
     }
-    if (Date.now() - seen.mtimeMs < LOCK_FRESH_MS) return false;
-    const stale = `${lock}.${process.pid}.${randomBytes(4).toString("hex")}`;
+    if (!takeBreak(breaker)) return false; // un autre hook le reprend
     try {
-      renameSync(lock, stale);
-    } catch {
-      continue; // un autre hook l'a repris
-    }
-    let other = false;
-    try {
-      other = statSync(stale).ino !== seen.ino;
-    } catch {
-      // disparu : rien à rendre
-    }
-    if (other) {
+      let seen;
       try {
-        renameSync(stale, lock);
+        seen = statSync(lock);
       } catch {
-        removeQuietly(stale);
+        continue; // retiré entre-temps : nouvel essai
       }
-      return false;
+      if (isFresh(seen)) return false;
+      const stale = `${lock}.${process.pid}.${randomBytes(4).toString("hex")}`;
+      try {
+        renameSync(lock, stale);
+      } catch {
+        continue;
+      }
+      let other = false;
+      try {
+        const st = statSync(stale);
+        other = st.ino !== seen.ino || isFresh(st);
+      } catch {
+        // disparu : rien à rendre
+      }
+      if (other) {
+        try {
+          linkSync(stale, lock);
+        } catch {
+          // EEXIST : un autre hook tient le verrou ; on attend son Builder.
+        }
+        removeQuietly(stale);
+        return false;
+      }
+      removeQuietly(stale);
+      // Pris par un hook arrivé entre-temps (EEXIST) : c'est lui qui lance.
+      return createExclusive(lock);
+    } finally {
+      removeQuietly(breaker);
     }
-    removeQuietly(stale);
   }
   return false;
 }
@@ -245,7 +285,7 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
   } catch {
     // introuvable
   }
-  if (!isDir) return force ? `dossier de projet introuvable : ${dir}\n` : "";
+  if (!isDir) return force ? `Ottho Builder 2 : dossier de projet introuvable : ${dir}\n` : "";
 
   const engine = engineOf(env);
   let url = await findBuilder(dir, probed);

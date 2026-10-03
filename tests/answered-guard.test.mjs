@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FOLLOW_RECO, answeredPairs, decide, guard, newAnswersContext, similar, withFollowReco } from "../scripts/answered-guard.mjs";
 
-// Format écrit par Ottho Builder 2 (docs/questions/*.md, section « Questions ouvertes » des specs).
+// Format consigné par Claude depuis le terminal (docs/questions/*.md, section « Questions ouvertes » des specs).
 const FILE = `# Questions du projet
 
 ## Questions ouvertes
@@ -40,7 +40,7 @@ test("decide : questions déjà répondues retrouvées, les autres restent à po
   assert.deepEqual(unmatched, ["Quel nom de domaine veux-tu réserver ?"]);
 });
 
-test("guard : AskUserQuestion sur des questions déjà répondues dans l'app → refus avec les réponses ; sinon rien", async () => {
+test("guard : AskUserQuestion sur des questions déjà répondues (consignées) → refus avec les réponses ; sinon rien", async () => {
   const dir = await mkdtemp(join(tmpdir(), "guard-"));
   await mkdir(join(dir, "docs", "questions"), { recursive: true });
   await writeFile(join(dir, "docs", "questions", "projet.md"), FILE);
@@ -49,9 +49,9 @@ test("guard : AskUserQuestion sur des questions déjà répondues dans l'app →
   const out = await guard(payload(["Quel modèle économique retiens-tu : abonnement fixe ou gratuit avec commission ?"]), dir);
   assert.equal(out.hookSpecificOutput.permissionDecision, "deny");
   const reason = out.hookSpecificOutput.permissionDecisionReason;
-  assert.match(reason, /déjà répondu dans Ottho Builder 2/);
+  assert.match(reason, /^L'utilisateur a déjà répondu \(réponses consignées dans docs\/questions\/projet\.md\)\./);
+  assert.doesNotMatch(reason, /Ottho Builder/);
   assert.match(reason, /→ abonnement fixe/);
-  assert.match(reason, /docs\/questions\/projet\.md/);
 
   // Question sans réponse : elle passe, avec le choix « Suivre tes recos » en plus.
   const reco = await guard(payload(["Quel nom de domaine veux-tu réserver ?"]), dir);
@@ -71,13 +71,15 @@ test("script : lit le message du hook sur l'entrée standard et répond en JSON"
   assert.equal(out.hookSpecificOutput.permissionDecision, "deny");
 });
 
-test("UserPromptSubmit : les réponses données dans l'app depuis le dernier message passent dans le contexte, une seule fois", async () => {
+test("UserPromptSubmit : les réponses consignées depuis le dernier message passent dans le contexte, une seule fois", async () => {
   const dir = await mkdtemp(join(tmpdir(), "guard-"));
   await mkdir(join(dir, "docs"), { recursive: true });
   const prd = "# PRD\n\n## 8. Questions ouvertes\n\n- [x] Confirmes-tu le retrait de l'IA du MVP ?\n  > Réponse (2026-09-27) : ok\n";
   await writeFile(join(dir, "docs", "PRD.md"), prd);
   const first = await newAnswersContext(dir);
   assert.equal(first.hookSpecificOutput.hookEventName, "UserPromptSubmit");
+  assert.match(first.hookSpecificOutput.additionalContext, /^Réponses de l'utilisateur consignées dans les fichiers du projet depuis son dernier message \(docs\/PRD\.md\)\./);
+  assert.doesNotMatch(first.hookSpecificOutput.additionalContext, /Ottho Builder/);
   assert.match(first.hookSpecificOutput.additionalContext, /priment sur toute hypothèse/);
   assert.match(first.hookSpecificOutput.additionalContext, /retrait de l'IA du MVP \? → ok/);
   assert.equal(await newAnswersContext(dir), null); // déjà transmise

@@ -104,7 +104,7 @@ export async function guard(payload, projectDir) {
     return updatedInput ? { hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput } } : null;
   }
   const reason = [
-    `L'utilisateur a déjà répondu dans Ottho Builder 2 (${[...sources].join(", ")}). Utilise ces réponses et ne repose pas ces questions :`,
+    `L'utilisateur a déjà répondu (réponses consignées dans ${[...sources].join(", ")}). Utilise ces réponses et ne repose pas ces questions :`,
     ...matched.map((m) => `- ${m.asked} → ${m.answer}`),
     unmatched.length ? `Repose seulement celles-ci, qui restent sans réponse : ${unmatched.map((q) => `« ${q} »`).join(" ; ")}` : "Toutes tes questions ont une réponse : continue avec elles.",
   ].join("\n");
@@ -140,7 +140,7 @@ export async function newAnswersContext(projectDir) {
   if (!fresh.length) return null;
   const files = [...new Set(fresh.map((p) => p.file))].join(", ");
   const context = [
-    `Réponses de l'utilisateur consignées dans Ottho Builder 2 depuis son dernier message (${files}). Elles priment sur toute hypothèse : ne les remplace pas, transmets-les aux agents concernés et ne repose pas ces questions.`,
+    `Réponses de l'utilisateur consignées dans les fichiers du projet depuis son dernier message (${files}). Elles priment sur toute hypothèse : ne les remplace pas, transmets-les aux agents concernés et ne repose pas ces questions.`,
     ...fresh.map((p) => `- ${p.question} → ${p.answer}`),
   ].join("\n");
   return { hookSpecificOutput: { hookEventName: "UserPromptSubmit", additionalContext: context } };

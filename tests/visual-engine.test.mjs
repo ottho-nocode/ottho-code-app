@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -277,6 +277,25 @@ test("verrou ancien (hook interrompu) : repris, le Builder est lancé, verrou re
   assert.ok(!existsSync(lockOf(ctx)));
 });
 
+test("trois hooks simultanés (processus distincts) et un verrou ancien : un seul lancement, aucun verrou laissé", async (t) => {
+  const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
+  await mkdir(join(ctx.dir, ".claude"), { recursive: true });
+  await writeFile(lockOf(ctx), "");
+  const old = new Date(Date.now() - 60_000);
+  await utimes(lockOf(ctx), old, old);
+  const hook = () => runScript(["--ports", String(ctx.port)], { input: sessionStart(ctx.dir), env: ctx.env, cwd: ctx.dir });
+  const results = await Promise.all([hook(), hook(), hook()]);
+  const url = `http://127.0.0.1:${ctx.port}`;
+  for (const res of results) {
+    assert.equal(res.code, 0);
+    assert.equal(res.stderr, "");
+    assert.equal(JSON.parse(res.stdout).systemMessage, `Ottho Builder 2 : ${url}`);
+  }
+  recorded(ctx); // un seul lancement
+  // Ni verrou, ni copie renommée (ottho-builder.lock.<pid>.<hex>) laissés derrière.
+  assert.deepEqual((await readdir(join(ctx.dir, ".claude"))).filter((f) => f.startsWith("ottho-builder.lock")), []);
+});
+
 test("source compact ou clear : lancé avec --no-open ; startup et resume ouvrent le navigateur", async (t) => {
   for (const [source, noOpen] of [["compact", true], ["clear", true], ["resume", false], [undefined, false]]) {
     const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
@@ -325,7 +344,7 @@ test("--open sur un dossier de projet introuvable : une ligne d'erreur, code 0, 
   const ctx = await setup(t);
   const missing = join(ctx.root, "faute-de-frappe");
   const res = await runScript(["--open", "--project", missing, "--ports", String(ctx.port)], { env: ctx.env, cwd: ctx.root });
-  assert.deepEqual(res, { code: 0, stdout: `dossier de projet introuvable : ${missing}\n`, stderr: "" });
+  assert.deepEqual(res, { code: 0, stdout: `Ottho Builder 2 : dossier de projet introuvable : ${missing}\n`, stderr: "" });
   assert.ok(!existsSync(missing));
   assert.deepEqual(launches(ctx), []);
   // En hook : silencieux.
