@@ -15,13 +15,12 @@
 //   (marqueur .claude/ottho-waiting) : l'autorisation est donnée, l'app retire la notification ;
 //   answered : PostToolUse AskUserQuestion, réponses données dans le sélecteur du terminal
 //   (question et réponse, pour que l'app ne les laisse pas « en attente »).
-// inApp : la session tourne dans le terminal intégré des anciennes versions d'Ottho Builder 2
-// (OTTHO_PIPELINE_TERMINAL=1) ; faux en pratique depuis son retrait (questions dans le CLI).
 // Pas de prompt ni de contenu de fichier. En fin d'exécution : les questions du bloc
 // « Questions pour toi » (10 au plus, 2 000 caractères chacune) et le compte rendu de
 // l'agent (8 000 caractères au plus, secrets reconnaissables masqués), consultables
-// dans l'historique du pipeline. Journal local, ignoré par Git. Jamais bloquant : sortie 0.
-import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, existsSync, rmSync, writeFileSync } from "node:fs";
+// dans l'historique du pipeline. Journal local, ignoré par Git. Écrit sans suivre de lien
+// symbolique (dépôt piégé). Jamais bloquant : sortie 0.
+import { closeSync, constants as fsConstants, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, existsSync, rmSync, writeSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { basename, isAbsolute, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -137,13 +136,13 @@ export function askAnswers(payload) {
     .slice(0, MAX_QUESTIONS);
 }
 
-function sessionEvent(payload, ts, inApp) {
+function sessionEvent(payload, ts) {
   const base = { v: 1, ts, agent: "claude", source: "session", session: payload.session_id ?? null };
   const hook = payload.hook_event_name;
   if (hook === "UserPromptSubmit") return { ...base, type: "reply" };
-  if (hook === "Stop") return { ...base, type: "ask", inApp, questions: sessionQuestionsOf(payload.last_assistant_message) };
+  if (hook === "Stop") return { ...base, type: "ask", questions: sessionQuestionsOf(payload.last_assistant_message) };
   if (hook === "Notification" && payload.notification_type === "permission_prompt") {
-    return { ...base, type: "wait", inApp, message: clipText(maskSecrets(String(payload.message ?? "")), 500) };
+    return { ...base, type: "wait", message: clipText(maskSecrets(String(payload.message ?? "")), 500) };
   }
   return null;
 }
@@ -248,14 +247,14 @@ export function activityDetail(tool, input = {}, projectDir = null) {
   return "";
 }
 
-export function buildEvent(payload, { now = new Date(), branch = null, transcript = "", launch = null, projectDir = null, inApp = false } = {}) {
+export function buildEvent(payload, { now = new Date(), branch = null, transcript = "", launch = null, projectDir = null } = {}) {
   const hook = payload?.hook_event_name;
   const ts = now.toISOString();
-  if (hook === "Stop" || hook === "UserPromptSubmit" || hook === "Notification") return sessionEvent(payload, ts, inApp);
+  if (hook === "Stop" || hook === "UserPromptSubmit" || hook === "Notification") return sessionEvent(payload, ts);
   if (hook === "PreToolUse" && payload?.tool_name === "AskUserQuestion" && !payload.agent_id) {
     const questions = (payload.tool_input?.questions ?? []).map((q) => q?.question).filter((q) => typeof q === "string" && q.trim()).map((q) => clipText(maskSecrets(q))).slice(0, MAX_QUESTIONS);
     if (!questions.length) return null;
-    return { v: 1, ts, type: "wait", agent: "claude", source: "session", session: payload.session_id ?? null, inApp, kind: "questions", message: `${questions.length} question${questions.length > 1 ? "s" : ""} dans le terminal`, questions };
+    return { v: 1, ts, type: "wait", agent: "claude", source: "session", session: payload.session_id ?? null, kind: "questions", message: `${questions.length} question${questions.length > 1 ? "s" : ""} dans le terminal`, questions };
   }
   if (hook === "PostToolUse" && payload?.tool_name === "AskUserQuestion") {
     const pairs = askAnswers(payload);
@@ -335,12 +334,34 @@ function currentBranch(cwd) {
   }
 }
 
+const { O_WRONLY, O_CREAT, O_TRUNC, O_APPEND, O_NOFOLLOW } = fsConstants;
+
+// Écrit (append : ajoute) sans suivre de lien symbolique : un lien piégé vers un fichier de
+// l'utilisateur fait échouer l'écriture (O_NOFOLLOW ; sans lui, sous Windows, lstat d'abord).
+export function writeNoFollow(path, text, { append = false } = {}) {
+  if (O_NOFOLLOW === undefined) {
+    let link = false;
+    try {
+      link = lstatSync(path).isSymbolicLink();
+    } catch {
+      // absent : créé
+    }
+    if (link) throw new Error(`lien symbolique refusé : ${path}`);
+  }
+  const fd = openSync(path, O_WRONLY | O_CREAT | (append ? O_APPEND : O_TRUNC) | (O_NOFOLLOW ?? 0), 0o644);
+  try {
+    writeSync(fd, text);
+  } finally {
+    closeSync(fd);
+  }
+}
+
 function main() {
   const payload = JSON.parse(readFileSync(0, "utf8"));
   const projectDir = process.env.CLAUDE_PROJECT_DIR || payload.cwd;
   if (!projectDir) return;
   const journal = join(projectDir, ".claude", "pipeline-events.jsonl");
-  const options = { branch: currentBranch(projectDir), projectDir, inApp: process.env.OTTHO_PIPELINE_TERMINAL === "1" };
+  const options = { branch: currentBranch(projectDir), projectDir };
   if (payload.hook_event_name === "SubagentStop") {
     options.launch = payload.agent_id ? findLaunch(readTail(journal), payload.agent_id) : null;
     options.transcript = payload.agent_transcript_path ? readTail(payload.agent_transcript_path) : "";
@@ -349,14 +370,14 @@ function main() {
   const waiting = join(projectDir, ".claude", "ottho-waiting");
   if (payload.hook_event_name === "PostToolUse" && !payload.agent_id && !["Agent", "Task", "AskUserQuestion"].includes(payload.tool_name) && existsSync(waiting)) {
     rmSync(waiting, { force: true });
-    appendFileSync(journal, JSON.stringify({ v: 1, ts: new Date().toISOString(), type: "resume", agent: "claude", source: "session", session: payload.session_id ?? null }) + "\n");
+    writeNoFollow(journal, JSON.stringify({ v: 1, ts: new Date().toISOString(), type: "resume", agent: "claude", source: "session", session: payload.session_id ?? null }) + "\n", { append: true });
     return;
   }
   const event = buildEvent(payload, options);
   if (!event) return;
   mkdirSync(join(projectDir, ".claude"), { recursive: true });
-  appendFileSync(journal, JSON.stringify(event) + "\n");
-  if (event.type === "wait" && event.kind !== "questions") writeFileSync(waiting, event.ts);
+  writeNoFollow(journal, JSON.stringify(event) + "\n", { append: true });
+  if (event.type === "wait" && event.kind !== "questions") writeNoFollow(waiting, event.ts);
 }
 
 const invoked = process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;

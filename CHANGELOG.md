@@ -6,7 +6,7 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 
 ### Ajouté
 
-- **Ottho Builder 2 lancé au démarrage de Claude Code** (hook `SessionStart`, `scripts/visual-engine.mjs`) : retrouve le Builder du projet (ports 4317 à 4326) ou, dans un projet Ottho ou un dossier neuf, le démarre détaché (`--idle-exit 30`, journal `.claude/ottho-builder.log`) ; adresse affichée à l'utilisateur, commandes du brief et de réouverture données à Claude. Verrou `.claude/ottho-builder.lock` (deux sessions simultanées : un seul Builder) ; après `compact` ou `clear`, lancé sans ouvrir le navigateur. Jamais bloquant.
+- **Ottho Builder 2 lancé au démarrage de Claude Code** (hook `SessionStart`, `scripts/visual-engine.mjs`) : retrouve le Builder du projet (ports 4317 à 4326) ou, dans un projet Ottho (`docs/brief.md`, `docs/PRD.md`, `design/charte.md` ou une spec `specs/US-*.md`) ou un dossier neuf, jamais dans le dossier personnel, le démarre détaché (`--idle-exit 30`, journal `.claude/ottho-builder.log`, jamais écrit à travers un lien symbolique) ; adresse affichée à l'utilisateur, commandes du brief et de réouverture données à Claude. Verrou `.claude/ottho-builder.lock` (deux sessions simultanées : un seul Builder) ; après `compact` ou `clear`, lancé sans ouvrir le navigateur. Jamais bloquant.
 - **Choix « Suivre tes recos »** sur chaque question du sélecteur (`AskUserQuestion`, ajouté par `answered-guard` via `updatedInput`) : l'IA tranche selon sa recommandation et la consigne dans le livrable.
 
 - **Commande `/pipeline`** (6e commande) : rouvre Ottho Builder 2 dans le navigateur, ou le démarre s'il ne tourne pas (`scripts/visual-engine.mjs --open`) ; plus de `npx ottho-pipeline` à lancer dans un terminal à part.
@@ -28,10 +28,6 @@ Tous les changements notables de ce plugin sont documentés ici. Format basé su
 - **Brief du projet** : écrit dans le terminal, étape 0 de `project-bootstrap` (exemple enregistré, ou les six blocs du canevas du module « De l'idée au projet validé » posés un par un, puis commande `brief` du Builder : `--list`, `--preset <nom>`, `--json <fichier>`). `brainstorming` part de `docs/brief.md`, coche les critères de chaque bloc et ne pose que les questions qui manquent ; `spec-writer` s'en sert pour le PRD ; `project-bootstrap` le transmet et fait écrire `docs/architecture.md`. Le modèle de PRD a une section « Historique ».
 
 - **Ottho Builder 2 en lecture seule** (seul son panneau Config écrit, dans `.env.local`) : les validations se donnent dans le terminal et Claude les consigne en fin de section « Historique » du livrable (`- AAAA-MM-JJ : Validé par l'utilisateur.`, lue par l'app) ; les fichiers de marque glissés dans le terminal sont copiés dans `design/assets/`. Skills `agency-method`, `project-bootstrap`, `sdd-feature-cycle`, agents `designer`, `brainstorming`, `spec-writer` et README mis à jour.
-
-### Retiré
-
-- **App du Dock retirée** (« Ottho Builder 2 » dans `~/Applications`) : le hook de démarrage ouvre déjà le Builder dans un projet Ottho, `/pipeline` le rouvre. `npx ottho-pipeline --install` enregistre seulement Ottho Builder 2 pour le plugin (une fois) et signale une ancienne app, à supprimer à la main.
 
 ### Corrigé
 

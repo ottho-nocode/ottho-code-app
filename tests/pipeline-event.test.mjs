@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { askAnswers, buildEvent, findLaunch, handbackText, lastAssistantText, maskSecrets, questionsOf, sessionQuestionsOf, textOf } from "../scripts/pipeline-event.mjs";
 
 const NOW = new Date("2026-09-26T14:05:12.000Z");
@@ -241,10 +246,10 @@ test("sessionQuestionsOf : liste numérotée, bloc standard, dernière phrase in
   assert.deepEqual(sessionQuestionsOf("Pourquoi ? Parce que la RLS manquait.\n\nCorrigé."), []);
 });
 
-test("Stop : questions de la session principale, sa session, lancée ou non dans le terminal du pipeline", () => {
+test("Stop : questions de la session principale et sa session (plus de champ inApp)", () => {
   const stop = { hook_event_name: "Stop", session_id: "s1", last_assistant_message: REAL_ASK };
-  assert.deepEqual(buildEvent(stop, { now: NOW, inApp: true }), {
-    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "ask", agent: "claude", source: "session", session: "s1", inApp: true,
+  assert.deepEqual(buildEvent(stop, { now: NOW }), {
+    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "ask", agent: "claude", source: "session", session: "s1",
     questions: [
       "Je lance l'agent architect pour mettre à jour la règle de validateLabel au § 2 du plan ?",
       "Je commite specs/ et reviews/ ?",
@@ -261,8 +266,8 @@ test("UserPromptSubmit : réponse de l'utilisateur, sans le contenu du message",
 
 test("Notification permission_prompt : Claude attend une autorisation ; autres notifications ignorées", () => {
   const n = { hook_event_name: "Notification", session_id: "s1", notification_type: "permission_prompt", message: "Claude needs your permission to use Bash" };
-  assert.deepEqual(buildEvent(n, { now: NOW, inApp: false }), {
-    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "wait", agent: "claude", source: "session", session: "s1", inApp: false,
+  assert.deepEqual(buildEvent(n, { now: NOW }), {
+    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "wait", agent: "claude", source: "session", session: "s1",
     message: "Claude needs your permission to use Bash",
   });
   assert.equal(buildEvent({ ...n, notification_type: "idle_prompt" }, { now: NOW }), null);
@@ -284,8 +289,8 @@ test("PostToolUse AskUserQuestion : réponses du sélecteur du terminal journali
 
 test("PreToolUse AskUserQuestion (session principale) : Claude pose des questions dans le terminal (wait, kind questions)", () => {
   const payload = { hook_event_name: "PreToolUse", tool_name: "AskUserQuestion", session_id: "s1", tool_input: { questions: [{ question: "Quelle cible ?" }, { question: "Quel modèle ?" }] } };
-  assert.deepEqual(buildEvent(payload, { now: NOW, inApp: true }), {
-    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "wait", agent: "claude", source: "session", session: "s1", inApp: true,
+  assert.deepEqual(buildEvent(payload, { now: NOW }), {
+    v: 1, ts: "2026-09-26T14:05:12.000Z", type: "wait", agent: "claude", source: "session", session: "s1",
     kind: "questions", message: "2 questions dans le terminal", questions: ["Quelle cible ?", "Quel modèle ?"],
   });
 });
@@ -294,4 +299,36 @@ test("fin spec-writer (PRD) : designer recommandé juste après, même si archit
   const text = "PRD écrit.\n\n> **Prochaine étape recommandée** : invoquer `designer`, qui demande (ou propose) la charte graphique et les maquettes pendant que l'utilisateur relit le PRD ; `architect` vient après la charte et les maquettes.";
   const e = buildEvent(post("spec-writer", text), { now: NOW });
   assert.equal(e.next, "designer");
+});
+
+// Le hook lancé comme par Claude Code, dans un projet temporaire.
+const HOOK = fileURLToPath(new URL("../scripts/pipeline-event.mjs", import.meta.url));
+const runHook = (dir, payload, env = {}) =>
+  execFileSync(process.execPath, [HOOK], { input: JSON.stringify(payload), env: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: dir, ...env }, encoding: "utf8" });
+
+test("hook : attente d'autorisation journalisée sans inApp (même avec OTTHO_PIPELINE_TERMINAL=1), marqueur ottho-waiting", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "pipeline-event-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const n = { hook_event_name: "Notification", session_id: "s1", notification_type: "permission_prompt", message: "Claude needs your permission to use Bash" };
+  assert.equal(runHook(root, n, { OTTHO_PIPELINE_TERMINAL: "1" }), "");
+  const [event] = readFileSync(join(root, ".claude", "pipeline-events.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+  assert.equal(event.type, "wait");
+  assert.ok(!("inApp" in event));
+  assert.equal(readFileSync(join(root, ".claude", "ottho-waiting"), "utf8"), event.ts);
+});
+
+test("hook : journal ou marqueur en lien symbolique (dépôt piégé) : fichier visé intact, sortie 0", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "pipeline-event-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const victim = join(root, "victime.txt");
+  await writeFile(victim, "contenu intact\n");
+  const n = { hook_event_name: "Notification", session_id: "s1", notification_type: "permission_prompt", message: "attente" };
+  for (const name of ["ottho-waiting", "pipeline-events.jsonl"]) {
+    const dir = join(root, name);
+    await mkdir(join(dir, ".claude"), { recursive: true });
+    await symlink(victim, join(dir, ".claude", name));
+    assert.equal(runHook(dir, n), "");
+    assert.equal(readFileSync(victim, "utf8"), "contenu intact\n", name);
+    assert.ok(lstatSync(join(dir, ".claude", name)).isSymbolicLink());
+  }
 });

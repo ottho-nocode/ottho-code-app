@@ -90,7 +90,7 @@ Lance `security-auditor` sur tout le projet (secrets, RLS + advisors Supabase, c
 
 ### Voir le pipeline (Ottho Builder 2)
 
-Ottho Builder 2 s'ouvre tout seul dans le navigateur au démarrage de Claude Code, dans un projet Ottho ou un dossier vide (hook `SessionStart`, `scripts/visual-engine.mjs`). Il s'arrête 30 min après la fermeture de son dernier onglet ; la session suivante le relance. Pour le rouvrir :
+Ottho Builder 2 s'ouvre tout seul dans le navigateur au démarrage de Claude Code, dans un projet Ottho (brief, PRD, charte ou spec `specs/US-*.md`) ou un dossier vide, jamais dans le dossier personnel (hook `SessionStart`, `scripts/visual-engine.mjs`). Il s'arrête 30 min après la fermeture de son dernier onglet ; la session suivante le relance. Pour le rouvrir :
 
 ```
 /pipeline

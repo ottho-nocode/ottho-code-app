@@ -83,10 +83,29 @@ Le plugin n'installe aucun serveur MCP : chaque projet ajoute les siens dans son
 ## Questions à l'utilisateur : dans le terminal
 
 Les questions des agents se posent **dans le terminal** : Ottho Builder 2 les affiche en lecture seule (pas de champ de réponse, pas de terminal intégré) et renvoie l'utilisateur ici. Quand l'utilisateur répond :
-- **consigne la réponse** dans le livrable concerné, section « Questions ouvertes » (case cochée, puis `  > Réponse (AAAA-MM-JJ) : …`) : spec pour une feature, `docs/PRD.md` au niveau projet, sinon `docs/questions/<US-XX ou projet>.md` ; c'est là que les agents suivants la lisent ;
+- **consigne la réponse** dans le livrable concerné, section « Questions ouvertes » (case cochée, puis `  > Réponse (AAAA-MM-JJ) : …`) : spec pour une feature, `docs/PRD.md` au niveau projet, sinon `docs/questions/US-XX.md` (feature sans spec) ou `docs/questions/projet.md` (projet sans PRD), au format ci-dessous ; c'est là que les agents suivants la lisent ;
 - **transmets-la** à l'agent suivant et ne la remplace jamais par une hypothèse ;
 - avant de reposer une question, **relis ces sections** : si elle y a déjà une réponse, reprends-la. Le hook `answered-guard` refuse d'ailleurs une question du sélecteur (`AskUserQuestion`) déjà répondue et te donne la réponse ;
 - chaque question du sélecteur reçoit aussi le choix **« Suivre tes recos »** (ajouté par `answered-guard`), et l'utilisateur peut l'écrire en toutes lettres (« suis tes recos »). Dans ce cas, **tranche toi-même** selon la recommandation de l'agent (ou la tienne, justifiée en une ligne) et consigne-la comme réponse : `> Réponse (date) : suivre la recommandation, <choix retenu>`. Donne donc toujours une recommandation par défaut avec tes questions.
+
+### Format de `docs/questions/`
+
+Ottho Builder 2 ne lit que `docs/questions/US-XX.md` (numéro seul, sans slug : `US-07.md`) et `docs/questions/projet.md`. Squelette exact :
+
+```markdown
+# Questions : US-07
+
+## Questions ouvertes
+
+- [ ] Faut-il un captcha à l'inscription ? (posée par brainstorming)
+- [x] Paiement par Stripe ou Paddle ? (posée par spec-writer)
+  > Réponse (2026-10-03) : Stripe, compte de test d'abord.
+  > Les factures restent hors périmètre.
+```
+
+- Titre de section exact `## Questions ouvertes` (`###` accepté, numéro permis : `## 7. Questions ouvertes`). La section s'arrête au titre suivant ou à une ligne `---` : rien d'autre dedans que les questions.
+- Une question par ligne, collée à gauche (une espace au plus avant le tiret) : `- [ ] question ?` en attente, `- [x] question ?` répondue. Suffixe facultatif en fin de ligne : `(posée par <agent>)`, nom d'agent sans espace (par défaut : `brainstorming`). Pas de `{{…}}` dans une question : la ligne serait prise pour un modèle et ignorée.
+- Réponse juste sous sa question, sans ligne vide entre les deux : première ligne `  > Réponse (AAAA-MM-JJ) : …`, lignes suivantes `  > …`. Coche la case **et** écris la réponse : une case cochée sans réponse s'affiche répondue mais vide.
 
 ## Validations : dans le terminal
 

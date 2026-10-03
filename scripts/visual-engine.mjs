@@ -2,9 +2,11 @@
 // Hook SessionStart du plugin ottho-code-app : Ottho Builder 2 (vue du pipeline des agents, en
 // lecture seule) accompagne chaque session Claude Code.
 //   Cherche le Builder du projet (/api/health sur 4317 à 4326, champ project ; l'appel avec
-//   ?project= le garde en vie). Sinon, dans un projet Ottho ou un dossier encore vide, le démarre
-//   détaché : node <cli> --project <dossier> --plugin <plugin> --idle-exit 30 (il s'arrête seul
-//   30 min après la fermeture de son dernier onglet), journal dans .claude/ottho-builder.log.
+//   ?project= le garde en vie). Sinon, dans un projet Ottho ou un dossier encore vide (jamais le
+//   dossier personnel), le démarre détaché : node <cli> --project <dossier> --plugin <plugin>
+//   --idle-exit 30 (il s'arrête seul 30 min après la fermeture de son dernier onglet), journal dans
+//   .claude/ottho-builder.log. Jamais à travers un lien symbolique : .claude ou le journal en lien
+//   (dépôt piégé) → pas de lancement, aucun fichier visé n'est écrit.
 //   Verrou .claude/ottho-builder.lock : deux hooks simultanés du même projet (deux sessions, ou le
 //   plugin chargé deux fois) ne lancent qu'un Builder, l'autre attend qu'il réponde.
 //   Verrou ancien (plus de 15 s) repris par un seul hook à la fois (.claude/ottho-builder.lock.break).
@@ -19,7 +21,7 @@
 // Jamais bloquant : toute erreur → sortie 0, rien sur stderr.
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { closeSync, existsSync, linkSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync } from "node:fs";
+import { closeSync, constants as fsConstants, existsSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -31,24 +33,55 @@ const WAIT_MS = 8000;
 const POLL_MS = 250;
 const PROBE_MS = 800;
 const LOCK_FRESH_MS = 15_000;
-// Fichiers qui signent un projet Ottho (specs : dossier).
-const MARKERS = [".claude/pipeline-events.jsonl", "docs/brief.md", "docs/PRD.md", "design/charte.md"];
+// Fichiers qui signent un projet Ottho, ou au moins une spec specs/US-*.md. Pas
+// .claude/pipeline-events.jsonl : les hooks du plugin l'écrivent dans tout dossier où il est actif.
+const MARKERS = ["docs/brief.md", "docs/PRD.md", "design/charte.md"];
+const SPEC_RE = /^US-\d+.*\.md$/i;
+// Seules entrées d'un dossier encore vide : Git, Finder, Claude Code, brief en cours.
+const EMPTY_DIR_ENTRIES = new Set([".git", ".DS_Store", ".claude", ".ottho-brief.json"]);
 
 export const NOT_FOUND = "Ottho Builder 2 introuvable : enregistre-le une fois (npx ottho-pipeline --install) pour voir le pipeline.";
 export const NOT_STARTED = "Ottho Builder 2 n'a pas démarré : voir .claude/ottho-builder.log.";
 export const STARTING = "Ottho Builder 2 démarre encore : il s'ouvrira dans le navigateur (sinon voir .claude/ottho-builder.log).";
 export const STARTING_NO_OPEN = "Ottho Builder 2 démarre encore : /pipeline l'ouvrira dans le navigateur (sinon voir .claude/ottho-builder.log).";
+export const UNSAFE = "Ottho Builder 2 n'a pas démarré : .claude ou .claude/ottho-builder.log est un lien symbolique, refusé par sécurité.";
 
-// Projet Ottho (un marqueur) ou dossier neuf (rien d'autre que des fichiers cachés).
-export function isOtthoProject(dir) {
-  if (MARKERS.some((m) => existsSync(join(dir, m)))) return true;
+const isFile = (path) => {
   try {
-    if (statSync(join(dir, "specs")).isDirectory()) return true;
+    return statSync(path).isFile();
   } catch {
-    // pas de specs/
+    return false;
   }
+};
+
+const hasSpec = (dir) => {
   try {
-    return readdirSync(dir).every((name) => name.startsWith("."));
+    return readdirSync(join(dir, "specs")).some((name) => SPEC_RE.test(name) && isFile(join(dir, "specs", name)));
+  } catch {
+    return false; // pas de specs/
+  }
+};
+
+// Dossier personnel (os.homedir() ou HOME de l'environnement), liens résolus.
+function isHome(dir, env) {
+  const real = (p) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return resolve(p);
+    }
+  };
+  const target = real(dir);
+  return [homedir(), env.HOME].some((h) => typeof h === "string" && h && real(h) === target);
+}
+
+// Projet Ottho (un marqueur ou une spec) ou dossier neuf (rien d'autre que .git, .DS_Store, .claude,
+// .ottho-brief.json). Jamais le dossier personnel, où Claude Code s'ouvre souvent sans projet.
+export function isOtthoProject(dir, env = process.env) {
+  if (isHome(dir, env)) return false;
+  if (MARKERS.some((m) => isFile(join(dir, m))) || hasSpec(dir)) return true;
+  try {
+    return readdirSync(dir).every((name) => EMPTY_DIR_ENTRIES.has(name));
   } catch {
     return false;
   }
@@ -98,7 +131,49 @@ const removeQuietly = (path) => {
 
 const isFresh = (st) => Date.now() - st.mtimeMs < LOCK_FRESH_MS;
 
-// Fichier créé seulement s'il n'existe pas : true si ce hook l'a créé.
+// Chemin de .claude ou du journal qui est un lien symbolique (dépôt piégé) : pas de lancement.
+class UnsafePathError extends Error {}
+
+// Dossier .claude du projet, créé au besoin : un vrai dossier, jamais un lien symbolique (le verrou
+// et le journal seraient écrits là où il pointe).
+function claudeDir(dir) {
+  const path = join(dir, ".claude");
+  try {
+    mkdirSync(path);
+  } catch (err) {
+    if (err?.code !== "EEXIST") throw err; // EEXIST aussi pour un lien, même cassé : rien de créé
+  }
+  const st = lstatSync(path);
+  if (st.isSymbolicLink()) throw new UnsafePathError(path);
+  if (!st.isDirectory()) throw new Error(`${path} n'est pas un dossier`);
+  return path;
+}
+
+const { O_WRONLY, O_CREAT, O_TRUNC, O_NOFOLLOW } = fsConstants;
+
+// Journal ouvert en écriture sans suivre de lien symbolique : O_NOFOLLOW (l'ouverture échoue avant
+// de vider quoi que ce soit) ; sans lui (Windows), lstat d'abord.
+function openLog(path) {
+  const isLink = () => {
+    try {
+      return lstatSync(path).isSymbolicLink();
+    } catch {
+      return false;
+    }
+  };
+  if (O_NOFOLLOW === undefined) {
+    if (isLink()) throw new UnsafePathError(path);
+    return openSync(path, "w");
+  }
+  try {
+    return openSync(path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0o644);
+  } catch (err) {
+    throw isLink() ? new UnsafePathError(path) : err; // ELOOP (EMLINK sous FreeBSD)
+  }
+}
+
+// Fichier créé seulement s'il n'existe pas : true si ce hook l'a créé. O_EXCL : un lien symbolique
+// au même chemin, même cassé, compte comme existant (jamais suivi).
 function createExclusive(path) {
   try {
     closeSync(openSync(path, "wx"));
@@ -114,7 +189,7 @@ function createExclusive(path) {
 function takeBreak(path) {
   if (createExclusive(path)) return true;
   try {
-    if (isFresh(statSync(path))) return false;
+    if (isFresh(lstatSync(path))) return false;
   } catch {
     // retiré entre-temps
   }
@@ -127,14 +202,14 @@ function takeBreak(path) {
 // (verrou de reprise) : sinon un hook qui reprend pourrait retirer le verrou neuf d'un autre et
 // laisser un troisième en créer un, d'où deux lancements. Sous ce verrou : renommé d'abord, et rendu
 // par un lien (échoue si le chemin est pris, jamais par-dessus un verrou neuf) si c'était en fait
-// un verrou récent.
+// un verrou récent. Aucun lien symbolique suivi : lstat, rename et rm agissent sur le lien lui-même,
+// et seul un fichier ordinaire (créé par un hook) est rendu. Dossier .claude déjà vérifié.
 function takeLock(lock) {
-  mkdirSync(dirname(lock), { recursive: true });
   const breaker = `${lock}.break`;
   for (let attempt = 0; attempt < 3; attempt++) {
     if (createExclusive(lock)) return true;
     try {
-      if (isFresh(statSync(lock))) return false;
+      if (isFresh(lstatSync(lock))) return false;
     } catch {
       continue; // retiré entre-temps
     }
@@ -142,7 +217,7 @@ function takeLock(lock) {
     try {
       let seen;
       try {
-        seen = statSync(lock);
+        seen = lstatSync(lock);
       } catch {
         continue; // retiré entre-temps : nouvel essai
       }
@@ -155,8 +230,8 @@ function takeLock(lock) {
       }
       let other = false;
       try {
-        const st = statSync(stale);
-        other = st.ino !== seen.ino || isFresh(st);
+        const st = lstatSync(stale);
+        other = st.isFile() && (st.ino !== seen.ino || isFresh(st));
       } catch {
         // disparu : rien à rendre
       }
@@ -181,8 +256,7 @@ function takeLock(lock) {
 
 // Builder détaché (il survit à la session), sorties dans .claude/ottho-builder.log.
 function launch({ engine, dir, pluginRoot, env, spawnFn, noOpen }) {
-  mkdirSync(join(dir, ".claude"), { recursive: true });
-  const fd = openSync(join(dir, ".claude", "ottho-builder.log"), "w");
+  const fd = openLog(join(claudeDir(dir), "ottho-builder.log"));
   try {
     const args = [engine.cli, "--project", dir, "--plugin", pluginRoot, "--idle-exit", "30", ...(noOpen ? ["--no-open"] : [])];
     const child = spawnFn(engine.node, args, {
@@ -299,17 +373,18 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
       }
     }
   } else {
-    if (!force && !isOtthoProject(dir)) return "";
+    if (!force && !isOtthoProject(dir, env)) return "";
     if (!engine) return say(NOT_FOUND);
-    const lock = join(dir, ".claude", "ottho-builder.lock");
+    let lock = null;
     let mine = false;
     let child = null;
     try {
+      lock = join(claudeDir(dir), "ottho-builder.lock");
       mine = takeLock(lock);
       if (mine) child = launch({ engine, dir, pluginRoot, env, spawnFn, noOpen });
-    } catch {
+    } catch (err) {
       if (mine) removeQuietly(lock);
-      return say(NOT_STARTED);
+      return say(err instanceof UnsafePathError ? UNSAFE : NOT_STARTED);
     }
     const waited = await waitBuilder(dir, probed, child, waitMs);
     // Builder qui démarre encore : verrou gardé (expire au bout de 15 s), pas de second lancement.

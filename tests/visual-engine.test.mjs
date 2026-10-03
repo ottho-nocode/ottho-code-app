@@ -1,14 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { mkdir, mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
+import { lutimes, mkdir, mkdtemp, readdir, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { NOT_FOUND, NOT_STARTED, PORTS, STARTING, STARTING_NO_OPEN, engineOf, isOtthoProject, main, parsePorts, shellQuote } from "../scripts/visual-engine.mjs";
+import { NOT_FOUND, NOT_STARTED, PORTS, STARTING, STARTING_NO_OPEN, UNSAFE, engineOf, isOtthoProject, main, parsePorts, shellQuote } from "../scripts/visual-engine.mjs";
 
 const SCRIPT = fileURLToPath(new URL("../scripts/visual-engine.mjs", import.meta.url));
 const PLUGIN = dirname(dirname(SCRIPT));
@@ -194,7 +194,7 @@ test("dossier neuf (fichiers cachés seulement) : lancé ; engine.json au node d
 });
 
 test("Builder introuvable (ni OTTHO_PIPELINE_CLI ni engine.json) : message d'enregistrement (--install), code 0", async (t) => {
-  const ctx = await setup(t, { files: { specs: null } });
+  const ctx = await setup(t, { files: { "specs/US-01-inscription.md": "# US-01" } });
   const res = await runScript(["--ports", String(ctx.port)], { input: sessionStart(ctx.dir), env: { HOME: ctx.root, OTTHO_PIPELINE_HOME: ctx.home }, cwd: ctx.root });
   assert.equal(res.code, 0);
   assert.equal(res.stderr, "");
@@ -361,7 +361,7 @@ test("engineOf : engine.json lu dans le HOME de l'environnement donné si OTTHO_
   assert.equal(engineOf({ HOME: ctx.home }), null);
 });
 
-test("isOtthoProject : marqueurs du pipeline ou dossier neuf ; sinon non", async (t) => {
+test("isOtthoProject : marqueurs du pipeline, spec US ou dossier neuf ; jamais le journal du plugin seul ni le dossier personnel", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "visual-engine-markers-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const make = async (name, files) => {
@@ -373,15 +373,114 @@ test("isOtthoProject : marqueurs du pipeline ou dossier neuf ; sinon non", async
     }
     return dir;
   };
-  for (const marker of [".claude/pipeline-events.jsonl", "docs/brief.md", "docs/PRD.md", "design/charte.md"]) {
-    assert.ok(isOtthoProject(await make(marker.replace(/\W/g, "_"), { [marker]: "", "package.json": "{}" })), marker);
+  const env = { HOME: join(root, "home") };
+  const is = (dir) => isOtthoProject(dir, env);
+  for (const marker of ["docs/brief.md", "docs/PRD.md", "design/charte.md", "specs/US-01-inscription.md", "specs/us-12.md"]) {
+    assert.ok(is(await make(marker.replace(/\W/g, "_"), { [marker]: "", "package.json": "{}" })), marker);
   }
-  assert.ok(isOtthoProject(await make("specs-dir", { specs: null, "package.json": "{}" })));
-  assert.ok(!isOtthoProject(await make("specs-file", { specs: "" })));
-  assert.ok(isOtthoProject(await make("vide", {})));
-  assert.ok(isOtthoProject(await make("caches", { ".claude/settings.json": "{}", ".env": "" })));
-  assert.ok(!isOtthoProject(await make("autre", { "README.md": "# autre", docs: null })));
-  assert.ok(!isOtthoProject(join(root, "inexistant")));
+  // Journal des hooks : écrit dans tout dossier où le plugin est actif, ce n'est pas un marqueur.
+  assert.ok(!is(await make("journal-seul", { ".claude/pipeline-events.jsonl": "", "package.json": "{}" })));
+  assert.ok(!is(await make("specs-vide", { specs: null, "package.json": "{}" })));
+  assert.ok(!is(await make("specs-autres", { "specs/notes.md": "", "specs/US-01": null, "package.json": "{}" })));
+  assert.ok(!is(await make("specs-fichier", { specs: "" })));
+  assert.ok(!is(await make("marqueur-dossier", { "docs/brief.md": null, "package.json": "{}" })));
+  // Dossier neuf : rien d'autre que .git, .DS_Store, .claude et .ottho-brief.json.
+  assert.ok(is(await make("vide", {})));
+  assert.ok(is(await make("neuf", { ".git/HEAD": "", ".DS_Store": "", ".claude/pipeline-events.jsonl": "", ".ottho-brief.json": "{}" })));
+  assert.ok(!is(await make("caches", { ".claude/settings.json": "{}", ".env": "" })));
+  assert.ok(!is(await make("gitignore", { ".gitignore": "node_modules" })));
+  assert.ok(!is(await make("autre", { "README.md": "# autre", docs: null })));
+  assert.ok(!is(join(root, "inexistant")));
+  // Dossier personnel (HOME de l'environnement, liens résolus) : jamais, même presque vide ou marqué.
+  const home = await make("home", { ".DS_Store": "", ".claude/pipeline-events.jsonl": "" });
+  assert.ok(!is(home));
+  assert.ok(!is(`${home}/`));
+  await symlink(home, join(root, "lien-home"));
+  assert.ok(!is(join(root, "lien-home")));
+  await writeFile(join(home, ".ottho-brief.json"), "{}");
+  await mkdir(join(home, "docs"));
+  await writeFile(join(home, "docs", "brief.md"), "# Brief");
+  assert.ok(!is(home));
+  assert.ok(isOtthoProject(home, { HOME: join(root, "vide") }), "le même dossier, hors HOME, est un projet");
+});
+
+test("dossier personnel : jamais lancé au démarrage, même presque vide ; --open le lance quand même", async (t) => {
+  const ctx = await setup(t, { files: { ".DS_Store": "", ".claude/pipeline-events.jsonl": "" } });
+  const env = { ...ctx.env, HOME: ctx.dir };
+  assert.equal(await main({ stdin: sessionStart(ctx.dir), env, ports: [ctx.port] }), "");
+  assert.deepEqual(launches(ctx), []);
+  assert.deepEqual(await readdir(join(ctx.dir, ".claude")), ["pipeline-events.jsonl"], "rien d'écrit dans .claude");
+  // Hors du dossier personnel, ce même dossier (rien que des entrées cachées admises) est neuf : lancé.
+  const out = await main({ argv: ["--open", "--project", ctx.dir], env, ports: [ctx.port], open: () => {} });
+  assert.equal(out, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}\n`);
+  assert.equal(recorded(ctx).argv[1], ctx.dir);
+});
+
+test("projet quelconque où le plugin a déjà journalisé (.claude/pipeline-events.jsonl) : rien n'est lancé", async (t) => {
+  const ctx = await setup(t, { files: { ".claude/pipeline-events.jsonl": "{}\n", "package.json": "{}", "src/index.js": "" } });
+  assert.equal(await main({ stdin: sessionStart(ctx.dir), env: ctx.env, ports: [ctx.port] }), "");
+  assert.deepEqual(launches(ctx), []);
+  assert.ok(!existsSync(lockOf(ctx)));
+});
+
+// Fichier hors du projet qu'un lien symbolique piégé (dépôt cloné) voudrait faire écraser.
+async function victim(ctx, name = "victime.txt") {
+  const path = join(ctx.root, name);
+  await writeFile(path, "contenu intact\n");
+  return path;
+}
+
+test("journal en lien symbolique : refusé, fichier visé intact, rien de lancé ni de verrou laissé", async (t) => {
+  const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
+  const target = await victim(ctx);
+  await mkdir(join(ctx.dir, ".claude"));
+  await symlink(target, join(ctx.dir, ".claude", "ottho-builder.log"));
+  const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir), env: ctx.env, ports: [ctx.port], waitMs: 500 }));
+  assert.deepEqual(out, { systemMessage: UNSAFE });
+  assert.equal(readFileSync(target, "utf8"), "contenu intact\n");
+  assert.ok(lstatSync(join(ctx.dir, ".claude", "ottho-builder.log")).isSymbolicLink(), "le lien n'est pas remplacé");
+  assert.deepEqual(launches(ctx), []);
+  assert.ok(!existsSync(lockOf(ctx)), "verrou rendu");
+  // Lien cassé (cible absente) : refusé aussi, la cible n'est pas créée.
+  const missing = join(ctx.root, "absent.txt");
+  await rm(join(ctx.dir, ".claude", "ottho-builder.log"));
+  await symlink(missing, join(ctx.dir, ".claude", "ottho-builder.log"));
+  assert.deepEqual(JSON.parse(await main({ stdin: sessionStart(ctx.dir), env: ctx.env, ports: [ctx.port], waitMs: 500 })), { systemMessage: UNSAFE });
+  assert.ok(!existsSync(missing));
+  assert.deepEqual(launches(ctx), []);
+});
+
+test("dossier .claude en lien symbolique : refusé, rien n'est écrit là où il pointe (--open compris)", async (t) => {
+  const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
+  const elsewhere = join(ctx.root, "ailleurs");
+  await mkdir(elsewhere);
+  await symlink(elsewhere, join(ctx.dir, ".claude"));
+  assert.deepEqual(JSON.parse(await main({ stdin: sessionStart(ctx.dir), env: ctx.env, ports: [ctx.port], waitMs: 500 })), { systemMessage: UNSAFE });
+  assert.equal(await main({ argv: ["--open", "--project", ctx.dir], env: ctx.env, ports: [ctx.port], waitMs: 500, open: () => {} }), `${UNSAFE}\n`);
+  assert.deepEqual(await readdir(elsewhere), []);
+  assert.deepEqual(launches(ctx), []);
+});
+
+test("verrous anciens en liens symboliques (vers un fichier, ou cassé) : liens retirés sans toucher leur cible, un seul lancement", async (t) => {
+  for (const dangling of [false, true]) {
+    const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
+    const target = await victim(ctx);
+    const missing = join(ctx.root, "absent.txt");
+    const old = new Date(Date.now() - 60_000);
+    await utimes(target, old, old);
+    await mkdir(join(ctx.dir, ".claude"));
+    // Le verrou vise la victime ou rien ; le verrou de reprise vise la victime.
+    await symlink(dangling ? missing : target, lockOf(ctx));
+    await symlink(target, `${lockOf(ctx)}.break`);
+    await lutimes(lockOf(ctx), old, old);
+    await lutimes(`${lockOf(ctx)}.break`, old, old);
+    const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir), env: ctx.env, ports: [ctx.port], waitMs: 2000 }));
+    assert.equal(out.systemMessage, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}`, `lien cassé : ${dangling}`);
+    recorded(ctx);
+    assert.equal(readFileSync(target, "utf8"), "contenu intact\n");
+    assert.ok(!existsSync(missing));
+    assert.deepEqual((await readdir(join(ctx.dir, ".claude"))).filter((f) => f.startsWith("ottho-builder.lock")), []);
+  }
 });
 
 test("parsePorts : plages et listes ; illisible → null", () => {
