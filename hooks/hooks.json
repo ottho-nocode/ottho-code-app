@@ -1,4 +1,7 @@
 {
+  "modules": [
+    "./equipe/register.tsx"
+  ],
   "hooks": {
     "SessionStart": [
       {

@@ -16,6 +16,7 @@ Agences et freelances qui construisent des apps web (Next.js + Supabase + Brevo/
 - **9 MCP recommandés** — non installés par défaut : GitHub, Vercel, Supabase, Stripe, Brevo, Resend, Notion, Figma, Context7. À ajouter par projet, voir [Les 9 MCP recommandés](#les-9-mcp-recommandés-non-installés-par-défaut). (Pencil : fourni par l'app desktop [pencil.dev](https://pencil.dev), pas par le plugin.)
 - **3 hooks de sécurité Git** : branch-guard (anti-commit direct main/develop), git-safe (anti-reset --hard / push --force), secret-scan (anti-fuite de clés API).
 - **5 templates** : CLAUDE.md, PRD, fiche feature SDD, plan technique, .gitignore.
+- **Panneau « Équipe » dans Claude Code** : le robot de chaque agent, son déroulé en direct et les validations qui t'attendent, à côté de la conversation (commande `/equipe`).
 
 ---
 
@@ -106,6 +107,24 @@ C'est une vue **en lecture seule** : carte des agents, agent en cours et ce qu'i
 Seul son panneau Config écrit : les variables d'environnement du projet, dans `.env.local`. La vue est alimentée par les hooks du plugin (`scripts/pipeline-event.mjs`), qui écrivent `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquants).
 
 Une fois, `npx ottho-pipeline --install` enregistre Ottho Builder 2 pour le plugin (`~/.ottho-pipeline/engine.json`, lu par le hook) ; tout lancement à la main du Builder (`npx ottho-pipeline`) l'enregistre aussi.
+
+### Panneau « Équipe » dans Claude Code
+
+Dans un projet suivi par Ottho Builder 2, un panneau « Équipe » s'ouvre aussi dans Claude Code, à côté de la conversation (module de hooks `hooks/equipe/register.tsx`). Il reprend l'essentiel du Builder et se met à jour toutes les 4 secondes :
+
+- les étapes de la feature en cours : Spec, Plan, Code, Revue, Tests, Fusion ;
+- **À toi de jouer** : les questions des agents sans réponse, les livrables à valider et la prochaine étape. Le bouton « Préparer le message » écrit le bon message dans la zone de saisie, sans l'envoyer : tu relis, puis tu appuies sur Entrée ;
+- **L'équipe** : le robot de chaque agent, son statut (travaille depuis…, terminé, interrompu, sans nouvelles depuis 8 min), son nombre de passages et ses dernières actions en direct.
+
+Il ne s'ouvre de lui-même que si Ottho Builder 2 suit le projet. Pour le rouvrir :
+
+```
+/equipe
+```
+
+Tant qu'il est ouvert, il garde Ottho Builder 2 en vie, comme un onglet du navigateur. Comme le Builder, il est en lecture seule.
+
+Prérequis : une version de Claude Code qui charge les modules de hooks. C'est une fonction en accès anticipé, activée à distance par Anthropic ; le panneau a été testé avec Claude Code 2.1.289. Sans elle, le panneau n'apparaît pas. Le reste du plugin n'utilise pas ce module.
 
 ---
 
@@ -296,6 +315,13 @@ claude plugin validate
 ```
 
 Le plugin doit passer vert. Vérifie le schéma `plugin.json`, les frontmatters d'agents/skills/commands, et `hooks/hooks.json`.
+
+Tests :
+
+```bash
+node --test tests/*.test.mjs   # scripts des hooks
+claude plugin test             # panneau « Équipe » (tests/equipe.test.tsx)
+```
 
 ---
 

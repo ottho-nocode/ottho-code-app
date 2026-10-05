@@ -20,5 +20,6 @@
     "workflow",
     "security",
     "rls"
-  ]
+  ],
+  "types": "./types/index.d.ts"
 }

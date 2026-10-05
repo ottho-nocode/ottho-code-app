@@ -2,6 +2,12 @@
 
 Tous les changements notables de ce plugin sont documentés ici. Format basé sur [Keep a Changelog](https://keepachangelog.com/) et le plugin respecte le [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Ajouté
+
+- **Panneau « Équipe » dans Claude Code** (module de hooks `hooks/equipe/register.tsx`, déclaré dans `hooks/hooks.json` sous `modules`, état typé dans `types/index.d.ts`) : lit `/api/state` du Builder de ce projet (ports 4317 à 4326) toutes les 4 secondes et affiche les étapes de la feature en cours, ce qui attend l'utilisateur (questions sans réponse, livrables à valider, prochaine étape, agent silencieux depuis 8 min) avec un bouton qui prépare le message dans la zone de saisie sans l'envoyer, et les 10 agents (robot, statut, passages, dernières actions). S'ouvre seul une fois quand un Builder suit le projet, sinon `/equipe`. Garde le Builder en vie (`/api/health?project=`). Têtes des robots intégrées (`hooks/equipe/heads.ts`, généré depuis `ottho-pipeline`). Tests : `tests/equipe.test.tsx` (`claude plugin test`). Exige les modules de hooks de Claude Code (accès anticipé).
+
 ## [1.2.0] — 2026-09-26
 
 ### Ajouté
