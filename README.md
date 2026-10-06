@@ -124,6 +124,20 @@ Il ne s'ouvre de lui-même que si Ottho Builder 2 suit le projet. Pour le rouvri
 
 Tant qu'il est ouvert, il garde Ottho Builder 2 en vie, comme un onglet du navigateur. Comme le Builder, il est en lecture seule.
 
+### Panneau « Agents Ottho » dans Claude Code
+
+Un second panneau, « Agents Ottho » (module `hooks/agents-pane/register.tsx`), suit les agents **sans Ottho Builder 2** : il lit directement le journal du plugin, `.claude/pipeline-events.jsonl`, dès qu'un agent démarre, agit ou termine.
+
+- une ligne par agent du pipeline : en cours (US, depuis combien de temps, ce qu'il fait : « lit specs/US-02.md »), terminé (il y a combien de temps, verdict), interrompu (sans nouvelles depuis 30 min) ou au repos ;
+- en bas : « Claude attend ta réponse » (ou ton autorisation) dans le terminal, et la prochaine étape recommandée ;
+- des **notifications** : un agent démarre, un agent a fini (verdict et suite), Claude attend ta réponse.
+
+Il s'ouvre de lui-même dans un projet Ottho (`docs/brief.md`, `docs/PRD.md`, `design/charte.md` ou une spec `specs/US-*.md`) quand le terminal est assez large, jamais sous `claude -p`. Pour l'ouvrir :
+
+```
+/ottho-agents
+```
+
 Prérequis : une version de Claude Code qui charge les modules de hooks. C'est une fonction en accès anticipé, activée à distance par Anthropic ; le panneau a été testé avec Claude Code 2.1.289. Sans elle, le panneau n'apparaît pas. Le reste du plugin n'utilise pas ce module.
 
 ---
@@ -320,7 +334,7 @@ Tests :
 
 ```bash
 node --test tests/*.test.mjs   # scripts des hooks
-claude plugin test             # panneau « Équipe » (tests/equipe.test.tsx)
+claude plugin test             # panneaux de Claude Code (tests/equipe.test.tsx ; le modèle d'« Agents Ottho » est couvert par node --test)
 ```
 
 ---

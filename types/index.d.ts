@@ -1,4 +1,5 @@
-// Contrat de l'état que le panneau « Équipe » (hooks/equipe/register.tsx) garde pour la session.
+// Contrat de l'état que les panneaux du plugin gardent pour la session : « Équipe »
+// (hooks/equipe/register.tsx) et « Agents Ottho » (hooks/agents-pane/register.tsx).
 
 export type AgentStatus = 'running' | 'silent' | 'done' | 'interrupted' | 'idle'
 
@@ -34,8 +35,36 @@ export type PanelView = {
   checkedAt: string
 }
 
+// « Agents Ottho » : dernière exécution de chaque agent lue dans le journal du pipeline.
+export type AgentRun = {
+  id: string
+  agent: string
+  us: string | null
+  status: 'running' | 'done' | 'interrupted'
+  startedAt: number
+  endedAt: number | null
+  lastSeen: number
+  activity: string | null
+  verdict: string | null
+  next: string | null
+}
+
+export type Waiting = {
+  kind: 'ask' | 'wait'
+  count: number
+  since: number
+  message?: string | null
+}
+
+export type AgentsSnapshot = {
+  latest: Record<string, AgentRun>
+  waiting: Waiting | null
+  next: string | null
+  us: string | null
+}
+
 declare module 'claude-code' {
   interface PluginState {
-    'ottho-code-app': { equipe: PanelView | null }
+    'ottho-code-app': { equipe: PanelView | null; agents: AgentsSnapshot | null; agentsNow: number }
   }
 }

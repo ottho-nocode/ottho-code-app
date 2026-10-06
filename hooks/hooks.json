@@ -1,6 +1,6 @@
 {
   "modules": [
-    "./equipe/register.tsx"
+    "./register.tsx"
   ],
   "hooks": {
     "SessionStart": [
