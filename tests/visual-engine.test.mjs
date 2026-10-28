@@ -149,7 +149,9 @@ test("Builder déjà lancé pour le projet : adresse et contexte, rien n'est lan
   assert.match(context, /en lecture seule/);
   assert.match(context, /questions des agents et les validations se font dans ce terminal/);
   assert.ok(context.includes(builder.url));
-  assert.ok(context.includes(`'${process.execPath}' '${ctx.cli}' brief --project '${ctx.dir}'`));
+  assert.ok(context.includes(`node '${ctx.cli}' brief --project '${ctx.dir}'`));
+  // node du PATH, pas le chemin du node du hook (celui de Homebrew change à chaque mise à jour).
+  assert.ok(!context.includes(process.execPath));
   assert.match(context, /--json <fichier> ; format et questions : skill project-bootstrap, étape 0\./);
   assert.ok(context.includes(`node '${join(PLUGIN, "scripts", "visual-engine.mjs")}' --open --project '${ctx.dir}'`));
   assert.ok(!existsSync(ctx.record), "la fausse CLI n'a pas été lancée");
@@ -200,7 +202,7 @@ test("dossier neuf (fichiers cachés seulement) : lancé ; Builder du plugin de 
   assert.equal(out.systemMessage, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}`);
   assert.deepEqual(recorded(ctx).argv, ["--project", ctx.dir, "--plugin", plugin.dir, "--idle-exit", "30"]);
   const context = out.hookSpecificOutput.additionalContext;
-  assert.ok(context.includes(`'${process.execPath}' '${plugin.cli}' brief --project '${ctx.dir}'`), "node du hook, Builder du plugin");
+  assert.ok(context.includes(`node '${plugin.cli}' brief --project '${ctx.dir}'`), "Builder du plugin");
   assert.ok(context.includes(`node '${join(plugin.dir, "scripts", "visual-engine.mjs")}' --open`));
 });
 
@@ -226,7 +228,8 @@ test("sans OTTHO_PIPELINE_CLI ni CLAUDE_PLUGIN_ROOT : le Builder inclus dans le 
   assert.deepEqual(spawned, [
     { command: process.execPath, args: [BUILDER_CLI, "--project", ctx.dir, "--plugin", PLUGIN, "--idle-exit", "30", "--no-open"], cwd: ctx.dir, detached: true },
   ]);
-  assert.ok(out.hookSpecificOutput.additionalContext.includes(`'${process.execPath}' '${BUILDER_CLI}' brief --project '${ctx.dir}'`));
+  // Lancé par le node du hook ; la commande du brief donnée à Claude passe par le node du PATH.
+  assert.ok(out.hookSpecificOutput.additionalContext.includes(`node '${BUILDER_CLI}' brief --project '${ctx.dir}'`));
   assert.deepEqual(launches(ctx), []);
 });
 
@@ -377,7 +380,8 @@ test("chemins avec espace, apostrophe, guillemet et $ : commandes du contexte va
   assert.equal(out.systemMessage, `Ottho Builder 2 : ${builder.url}`);
   const lines = out.hookSpecificOutput.additionalContext.split("\n");
   const brief = lines.find((l) => l.startsWith("Pour écrire le brief")).replace(/^[^:]*: /, "").replace(/ suivi d'une seule option.*$/, "");
-  assert.deepEqual(shellArgs(`x ${brief}`), [process.execPath, cli, "brief", "--project", ctx.dir]);
+  assert.ok(brief.startsWith("node "));
+  assert.deepEqual(shellArgs(brief), [cli, "brief", "--project", ctx.dir]);
   const reopen = lines.find((l) => l.startsWith("Pour rouvrir")).replace(/^.*premier plan : /, "");
   assert.deepEqual(shellArgs(reopen), [join(plugin, "scripts", "visual-engine.mjs"), "--open", "--project", ctx.dir]);
   assert.equal(shellQuote("l'a"), `'l'\\''a'`);

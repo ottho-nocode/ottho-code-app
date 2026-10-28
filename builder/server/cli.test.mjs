@@ -75,7 +75,9 @@ test("--reopen : retrouve l'instance du projet sans rien lancer, sinon explique 
       err.message,
       `Ottho Builder 2 ne tourne pas pour ce projet. Il démarre avec Claude Code dans un projet Ottho (le plugin ottho-code-app le lance) et la commande /pipeline le rouvre. À la main :\n  ${CLI_COMMAND} --project ${JSON.stringify(dir)}`,
     );
-    assert.doesNotMatch(err.message, /npx|ottho-pipeline|[—–]/);
+    // Sans les chemins (celui du dépôt peut contenir « ottho-pipeline » ou des tirets) : ni npx, ni --install.
+    const text = err.message.replace(CLI_COMMAND, "").replace(JSON.stringify(dir), "");
+    assert.doesNotMatch(text, /npx|--install|[—–]/);
     return true;
   });
   const first = await main(["--project", dir, "--plugin", dir, "--port", "4391", "--no-open"], { log });
