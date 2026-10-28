@@ -139,7 +139,7 @@ Il s'ouvre de lui-même dans un projet Ottho (`docs/brief.md`, `docs/PRD.md`, `d
 /ottho-agents
 ```
 
-Prérequis : une version de Claude Code qui charge les modules de hooks. C'est une fonction en accès anticipé, activée à distance par Anthropic ; le panneau a été testé avec Claude Code 2.1.289. Sans elle, le panneau n'apparaît pas. Le reste du plugin n'utilise pas ce module.
+Prérequis des deux panneaux : Claude Code 2.1.287 ou plus dans le terminal (2.1.286 pour l'app Desktop), versions où les mods (modules de hooks) sont activés par défaut ; testés avec Claude Code 2.1.289. Plus ancien, les panneaux n'apparaissent pas : mets Claude Code à jour (`claude update`). Le reste du plugin n'en dépend pas.
 
 ---
 
