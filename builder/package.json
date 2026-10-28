@@ -2,7 +2,7 @@
   "name": "ottho-pipeline",
   "version": "1.0.0",
   "private": true,
-  "description": "App de test locale : pipeline visuel des agents SDD du plugin ottho-code-app.",
+  "description": "Ottho Builder 2 : pipeline visuel des agents SDD, inclus dans le plugin ottho-code-app (jamais publié sur npm).",
   "type": "module",
   "bin": {
     "ottho-pipeline": "bin/cli.mjs"

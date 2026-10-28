@@ -1,9 +1,9 @@
 // Point d'entrée : options, réutilisation d'une instance existante, choix du
-// port (4317 puis les 9 suivants), ouverture du navigateur. Lancé par le hook de démarrage
-// du plugin ottho-code-app (ou à la main, Ctrl+C l'arrête). --reopen ne lance rien : il
-// retrouve l'instance du projet. --install ne lance rien non plus : il enregistre le Builder
-// pour le plugin (~/.ottho-pipeline/engine.json : comment le lancer, lu par son hook), ce que
-// chaque lancement refait. --idle-exit l'arrête seul quand plus aucun onglet n'est ouvert.
+// port (4317 puis les 9 suivants), ouverture du navigateur. Le Builder fait partie du plugin
+// ottho-code-app (dossier builder/) : son hook de démarrage le lance (ou à la main,
+// node <plugin>/builder/bin/cli.mjs --project <dossier>, Ctrl+C l'arrête). --reopen ne lance
+// rien : il retrouve l'instance du projet. --idle-exit l'arrête seul quand plus aucun onglet
+// n'est ouvert. Sans --plugin : le plugin qui contient ce Builder, sinon le plugin installé.
 // La sous-commande `brief` écrit docs/brief.md depuis Claude Code (ou l'enregistre comme exemple), sans rien lancer.
 import { spawn } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
@@ -15,14 +15,14 @@ import { findPluginDir } from "./agents.mjs";
 import { startApp } from "./app.mjs";
 import { BRIEF_FILE, cleanBrief, isEmptyBrief, listPresets, missingBlocks, readBrief, savePreset, writeBrief } from "./brief.mjs";
 import { eventsPath, rotateIfNeeded } from "./events.mjs";
-import { HttpError, atomicWrite, localDate } from "./files.mjs";
+import { HttpError, localDate } from "./files.mjs";
 
 const CLI = fileURLToPath(new URL("../bin/cli.mjs", import.meta.url));
 
-// Dossier du Builder (engine.json, exemples de brief). OTTHO_PIPELINE_HOME : autre dossier (tests).
+// Dossier des données du Builder (exemples de brief). OTTHO_PIPELINE_HOME : autre dossier (tests).
 const pipelineHome = () => process.env.OTTHO_PIPELINE_HOME || join(homedir(), ".ottho-pipeline");
-// Apps du Dock créées par les anciennes versions de --install : signalées, jamais supprimées.
-const OLD_DOCK_APPS = ["Ottho Builder 2.app", "ottho-pipeline.app"];
+// Commande qui lance ce Builder, pour les messages (chemin entre guillemets).
+const CLI_COMMAND = `node ${JSON.stringify(CLI)}`;
 
 export function resolveOptions(argv, cwd) {
   const { values } = parseArgs({
@@ -33,7 +33,6 @@ export function resolveOptions(argv, cwd) {
       port: { type: "string" },
       "no-open": { type: "boolean" },
       reopen: { type: "boolean" },
-      install: { type: "boolean" },
       "idle-exit": { type: "string" },
     },
   });
@@ -47,14 +46,19 @@ export function resolveOptions(argv, cwd) {
     port,
     open: !values["no-open"],
     reopen: Boolean(values.reopen),
-    install: Boolean(values.install),
     idleExitMs: idle === null ? null : idle * 60_000,
   };
 }
 
-// Comment relancer le Builder (lu par le hook de démarrage du plugin).
-export async function writeEngineFile({ home, node, cli }) {
-  await atomicWrite(join(home, "engine.json"), JSON.stringify({ node, cli }, null, 2) + "\n");
+// Plugin ottho-code-app qui contient ce Builder (<plugin>/builder/server/cli.mjs), ou null.
+export async function ownPluginDir(cliUrl = import.meta.url) {
+  const root = fileURLToPath(new URL("../../", cliUrl));
+  try {
+    const manifest = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
+    return manifest?.name === "ottho-code-app" ? resolve(root) : null;
+  } catch {
+    return null; // Builder hors du plugin (copie isolée)
+  }
 }
 
 // "free" si rien n'écoute, sinon ce que répond /api/health (app null si ce n'est pas nous).
@@ -78,7 +82,7 @@ export function openBrowser(url) {
   child.unref();
 }
 
-const BRIEF_USAGE = "usage : ottho-pipeline brief [--project <dossier>] --list | --preset <nom> | --json <fichier> | --save <nom>";
+const BRIEF_USAGE = `usage : ${CLI_COMMAND} brief [--project <dossier>] --list | --preset <nom> | --json <fichier> | --save <nom>`;
 
 // Brief écrit depuis Claude Code (les skills posent les six blocs puis appellent cette commande) :
 // exemple enregistré dans <home>/briefs ou fichier JSON, avec les gardes et sauvegardes de writeBrief.
@@ -161,23 +165,6 @@ async function savePresetCommand(projectDir, presetsDir, name, log) {
 export async function main(argv, { cwd = process.cwd(), log = console.log } = {}) {
   if (argv[0] === "brief") return briefCommand(argv.slice(1), { cwd, log });
   const opts = resolveOptions(argv, cwd);
-  if (opts.install) {
-    // Enregistrement seul : le hook du plugin lance le Builder même s'il n'a jamais été lancé à la main.
-    const home = pipelineHome();
-    await writeEngineFile({ home, node: process.execPath, cli: CLI });
-    log(`Ottho Builder 2 enregistré : ${join(home, "engine.json")}.`);
-    log("Le plugin ottho-code-app l'ouvrira au démarrage de Claude Code dans un projet Ottho (ou /pipeline pour le rouvrir).");
-    for (const name of OLD_DOCK_APPS) {
-      const app = join(homedir(), "Applications", name);
-      if (await stat(app).then(() => true, () => false)) log(`Ancienne app du Dock trouvée : ${app}. Elle ne sert plus, tu peux la supprimer.`);
-    }
-    return null;
-  }
-  try {
-    await writeEngineFile({ home: pipelineHome(), node: process.execPath, cli: CLI });
-  } catch {
-    // engine.json non écrit : le Builder démarre quand même.
-  }
   if (opts.reopen) {
     for (let port = opts.port; port < opts.port + 10; port++) {
       const existing = await probe(port);
@@ -189,10 +176,10 @@ export async function main(argv, { cwd = process.cwd(), log = console.log } = {}
       }
     }
     throw new Error(
-      `Ottho Builder 2 ne tourne pas pour ce projet. Il démarre avec Claude Code dans un projet Ottho (le plugin ottho-code-app le lance ; /ottho-code-app:pipeline le rouvre). À la main, dans le projet :\n  cd ${JSON.stringify(opts.projectDir)} && npx ottho-pipeline`,
+      `Ottho Builder 2 ne tourne pas pour ce projet. Il démarre avec Claude Code dans un projet Ottho (le plugin ottho-code-app le lance) et la commande /pipeline le rouvre. À la main :\n  ${CLI_COMMAND} --project ${JSON.stringify(opts.projectDir)}`,
     );
   }
-  const pluginDir = opts.pluginDir ?? (await findPluginDir());
+  const pluginDir = opts.pluginDir ?? (await ownPluginDir()) ?? (await findPluginDir());
   const distDir = fileURLToPath(new URL("../dist/", import.meta.url));
   await rotateIfNeeded(eventsPath(opts.projectDir));
 

@@ -10,7 +10,7 @@ Les élèves de la formation Ottho « Claude for Builders », souvent débutants
 
 ## Product Purpose
 
-Nom : **Ottho Builder 2** (paquet et commande `ottho-pipeline`). Rendre visible une équipe de 10 agents qui travaillent pour l'élève : qui tourne, qui attend quoi, ce qu'il faut valider. L'app guide sans piloter : lancée par le plugin au démarrage de Claude Code (enregistrée une fois pour lui avec `npx ottho-pipeline --install`), elle se lit et donne le prompt à coller dans le terminal ; réponses, validations, brief et fichiers de marque passent par Claude Code. Ses seules actions : la configuration des services (`.env.local`) et le lancement ou l'arrêt de l'aperçu. Réussite : l'élève sait toujours quoi faire ensuite, et il a le sentiment de diriger une équipe plutôt que de subir un outil.
+Nom : **Ottho Builder 2** (dossier `builder/` du plugin `ottho-code-app`, rien à installer à part). Rendre visible une équipe de 10 agents qui travaillent pour l'élève : qui tourne, qui attend quoi, ce qu'il faut valider. L'app guide sans piloter : lancée par le plugin au démarrage de Claude Code (`/pipeline` la rouvre), elle se lit et donne le prompt à coller dans le terminal ; réponses, validations, brief et fichiers de marque passent par Claude Code. Ses seules actions : la configuration des services (`.env.local`) et le lancement ou l'arrêt de l'aperçu. Réussite : l'élève sait toujours quoi faire ensuite, et il a le sentiment de diriger une équipe plutôt que de subir un outil.
 
 ## Brand Personality
 

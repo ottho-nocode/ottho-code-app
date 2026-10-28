@@ -1,6 +1,6 @@
 # Design
 
-> Système visuel d'Ottho Builder 2, l'interface `web/` (thèmes sombre et clair Ottho). Les valeurs vivent dans `web/src/styles.css`.
+> Système visuel d'Ottho Builder 2 (dossier `builder/` du plugin `ottho-code-app`), l'interface `web/` (thèmes sombre et clair Ottho). Les valeurs vivent dans `web/src/styles.css`. Le plugin livre l'interface construite (`builder/dist/`, versionné) : après une modification, `npm run build` puis committer `dist/` avec elle.
 
 ## Visual Theme
 

@@ -16,7 +16,7 @@ type Builder = { proc: ChildProcess; url: string };
 
 // Lance le Builder sur un projet et attend son adresse (ligne « prêt : http://… »).
 // Services : jamais la vraie configuration Claude Code de la machine.
-// engine.json et exemples de brief : dans un dossier temporaire (OTTHO_PIPELINE_HOME), jamais dans ~/.ottho-pipeline.
+// Exemples de brief : dans un dossier temporaire (OTTHO_PIPELINE_HOME), jamais dans ~/.ottho-pipeline.
 async function startBuilder(project: string, port: number, home: string, plugin: string): Promise<Builder> {
   const proc = spawn(process.execPath, ["bin/cli.mjs", "--project", project, "--plugin", plugin, "--port", String(port), "--no-open"], {
     stdio: ["ignore", "pipe", "inherit"],

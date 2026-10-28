@@ -85,7 +85,7 @@ test("atomicWrite : mode appliqué dès la création (0o600 pour les secrets)", 
 
 test("atomicWrite : écritures simultanées sur le même fichier, chacune avec son propre fichier temporaire", async () => {
   const dir = await tempDir("op-files-");
-  const file = join(dir, "engine.json");
+  const file = join(dir, "exemple.json");
   const contents = Array.from({ length: 10 }, (_, i) => `version ${i}`);
   await Promise.all(contents.map((c) => atomicWrite(file, c)));
   assert.ok(contents.includes(await readFile(file, "utf8")));

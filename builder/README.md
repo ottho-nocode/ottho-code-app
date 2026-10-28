@@ -1,6 +1,6 @@
 # Ottho Builder 2
 
-> Paquet npm et commande : `ottho-pipeline`.
+> Inclus dans le plugin Claude Code `ottho-code-app` (dossier `builder/`) : rien à installer ni à publier sur npm, l'interface est déjà construite (`builder/dist/`).
 
 App locale qui affiche, à côté de Claude Code, le pipeline des agents SDD du plugin Claude Code `ottho-code-app` :
 
@@ -19,43 +19,42 @@ Deux écritures seulement depuis l'app : les variables des services dans `.env.l
 
 ## Lancer
 
-Une fois, enregistre Ottho Builder 2 pour le plugin :
+Rien à lancer à la main : quand Claude Code démarre dans un projet Ottho (ou un dossier vide), le plugin `ottho-code-app` démarre Ottho Builder 2 pour ce dossier et l'ouvre dans le navigateur ; une session suivante réutilise le Builder déjà lancé. Il s'arrête seul 30 minutes après la fermeture du dernier onglet. Depuis Claude Code, `/pipeline` (ou `/ottho-code-app:pipeline`) rouvre le navigateur, ou démarre le Builder s'il ne tourne pas.
+
+À la main (`<plugin>` : dossier du plugin, celui qui contient `builder/`) :
 
 ```bash
-npx ottho-pipeline --install   # écrit ~/.ottho-pipeline/engine.json, ne lance rien
+node <plugin>/builder/bin/cli.mjs --project <dir>            # options : --plugin <dir> --port 4317 --no-open --idle-exit <min>
+node <plugin>/builder/bin/cli.mjs --project <dir> --reopen   # rouvre le navigateur sur le Builder du projet, sans rien lancer
 ```
 
-Ensuite, rien à lancer à la main : quand Claude Code démarre dans un projet Ottho (ou un dossier vide), le plugin `ottho-code-app` démarre Ottho Builder 2 pour ce dossier et l'ouvre dans le navigateur ; une session suivante réutilise le Builder déjà lancé. Il s'arrête seul 30 minutes après la fermeture du dernier onglet. Depuis Claude Code, `/ottho-code-app:pipeline` rouvre le navigateur.
+`--idle-exit <min>` arrête le Builder quand aucun onglet n'est ouvert depuis ce nombre de minutes (le plugin passe 30). Sans `--plugin`, les agents affichés sont ceux du plugin qui contient le Builder (sinon ceux du plugin installé).
 
-À la main, dans le dossier du projet :
-
-```bash
-npx ottho-pipeline            # options : --project <dir> --plugin <dir> --port 4317 --no-open --idle-exit <min>
-npx ottho-pipeline --reopen   # rouvre le navigateur sur le Builder du projet, sans rien lancer
-```
-
-`--idle-exit <min>` arrête le Builder quand aucun onglet n'est ouvert depuis ce nombre de minutes (le plugin passe 30). Chaque lancement à la main enregistre aussi le Builder (`~/.ottho-pipeline/engine.json`, lu par le plugin) : après un premier `npx ottho-pipeline`, `--install` n'est pas nécessaire. Une ancienne app « Ottho Builder 2 » dans `~/Applications` (versions précédentes de `--install`) ne sert plus : `--install` la signale, tu peux la supprimer. Désinstaller : supprimer `~/.ottho-pipeline`.
-
-Le brief, écrit par Claude depuis le terminal (`--project <dir>` pour un autre dossier) :
+Le brief, écrit par Claude depuis le terminal (le hook de démarrage du plugin lui donne la commande exacte ; `--project <dir>` pour un autre dossier) :
 
 ```bash
-npx ottho-pipeline brief --list               # exemples enregistrés dans ~/.ottho-pipeline/briefs
-npx ottho-pipeline brief --preset <nom>       # docs/brief.md depuis un exemple
-npx ottho-pipeline brief --json <fichier>     # docs/brief.md depuis un JSON (les six blocs)
-npx ottho-pipeline brief --save <nom>         # le brief du projet devient un exemple, dans ~/.ottho-pipeline/briefs
+node <plugin>/builder/bin/cli.mjs brief --list               # exemples enregistrés dans ~/.ottho-pipeline/briefs
+node <plugin>/builder/bin/cli.mjs brief --preset <nom>       # docs/brief.md depuis un exemple
+node <plugin>/builder/bin/cli.mjs brief --json <fichier>     # docs/brief.md depuis un JSON (les six blocs)
+node <plugin>/builder/bin/cli.mjs brief --save <nom>         # le brief du projet devient un exemple, dans ~/.ottho-pipeline/briefs
 ```
 
 Un seul mode à la fois. `--save` refuse un brief absent, vide ou écrit à la main (sans les données du canevas) ; un exemple du même nom est remplacé.
 
 Un brief vide ne remplace jamais un brief rempli ; la version remplacée est gardée dans `.claude/brief-backups/`.
 
+`~/.ottho-pipeline` ne garde que les exemples de brief (`briefs/`). Un ancien `~/.ottho-pipeline/engine.json` (écrit par `npx ottho-pipeline --install`, versions précédentes) ne sert plus : tu peux le supprimer.
+
 ## Développer
 
+Le serveur n'a aucune dépendance à l'exécution (modules intégrés de Node 20 ou plus) ; `npm ci` n'installe que les outils de build et de test. `dist/` est versionné : après une modification de `web/`, reconstruis-le et committe-le avec la modification.
+
 ```bash
-npm install
-npm test                      # tests serveur (node:test)
+cd builder && npm ci && npm run build && npm test && npx playwright test
+npm run typecheck             # types de l'interface (web/)
 npm run demo                  # crée un projet de démo et affiche son chemin
 node bin/cli.mjs --project <chemin-demo> --no-open   # API sur :4317
 npm run dev:web               # interface sur :3100 (proxy /api vers :4317)
-npm run test:e2e              # build + test Playwright
 ```
+
+À la racine du plugin, `node --test` passe aussi les tests serveur du Builder (`builder/server/*.test.mjs`).
