@@ -11,9 +11,9 @@
 //   plugin chargé deux fois) ne lancent qu'un Builder, l'autre attend qu'il réponde.
 //   Verrou ancien (plus de 15 s) repris par un seul hook à la fois (.claude/ottho-builder.lock.break).
 //   source compact ou clear : lancé avec --no-open (pas de navigateur en pleine session).
-//   Chemin du Builder : OTTHO_PIPELINE_CLI (tests), sinon <home>/engine.json, écrit par
-//   ottho-pipeline --install (une fois) et par chaque lancement d'ottho-pipeline
-//   (home : OTTHO_PIPELINE_HOME ou ~/.ottho-pipeline).
+//   Builder : inclus dans le plugin, <plugin>/builder/bin/cli.mjs, lancé par le node qui exécute
+//   ce hook (plugin : CLAUDE_PLUGIN_ROOT, sinon le dossier parent de scripts/). OTTHO_PIPELINE_CLI
+//   le remplace (tests).
 //   Sortie : systemMessage (adresse, pour l'utilisateur), additionalContext (pour Claude).
 // --open (commande /pipeline) : sans la garde du dossier, ouvre le navigateur si le Builder
 // tournait déjà (un Builder qui démarre l'ouvre lui-même), sortie en une ligne de texte.
@@ -21,7 +21,7 @@
 // Jamais bloquant : toute erreur → sortie 0, rien sur stderr.
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { closeSync, constants as fsConstants, existsSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync } from "node:fs";
+import { closeSync, constants as fsConstants, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -40,7 +40,7 @@ const SPEC_RE = /^US-\d+.*\.md$/i;
 // Seules entrées d'un dossier encore vide : Git, Finder, Claude Code, brief en cours.
 const EMPTY_DIR_ENTRIES = new Set([".git", ".DS_Store", ".claude", ".ottho-brief.json"]);
 
-export const NOT_FOUND = "Ottho Builder 2 introuvable : enregistre-le une fois (npx ottho-pipeline --install) pour voir le pipeline.";
+export const NOT_FOUND = "Ottho Builder 2 absent du plugin ottho-code-app (builder/bin/cli.mjs introuvable) : le plugin est incomplet, mets-le à jour ou réinstalle-le.";
 export const NOT_STARTED = "Ottho Builder 2 n'a pas démarré : voir .claude/ottho-builder.log.";
 export const STARTING = "Ottho Builder 2 démarre encore : il s'ouvrira dans le navigateur (sinon voir .claude/ottho-builder.log).";
 export const STARTING_NO_OPEN = "Ottho Builder 2 démarre encore : /pipeline l'ouvrira dans le navigateur (sinon voir .claude/ottho-builder.log).";
@@ -87,21 +87,14 @@ export function isOtthoProject(dir, env = process.env) {
   }
 }
 
-// Builder à lancer : { node, cli } ou null. Le node noté peut avoir disparu (mise à jour Homebrew) :
-// celui qui exécute ce hook le remplace.
-export function engineOf(env) {
-  let cli = env.OTTHO_PIPELINE_CLI;
-  let node = process.execPath;
-  if (!cli) {
-    const home = env.OTTHO_PIPELINE_HOME || join(env.HOME || homedir(), ".ottho-pipeline");
-    try {
-      ({ node, cli } = JSON.parse(readFileSync(join(home, "engine.json"), "utf8")));
-    } catch {
-      return null;
-    }
-  }
-  if (typeof cli !== "string" || !cli || !existsSync(cli)) return null;
-  return { node: typeof node === "string" && node && existsSync(node) ? node : process.execPath, cli: resolve(cli) };
+// Dossier du plugin : CLAUDE_PLUGIN_ROOT (fourni par Claude Code), sinon celui de ce script.
+export const pluginRootOf = (env) => resolve(env.CLAUDE_PLUGIN_ROOT || PLUGIN_ROOT);
+
+// Builder à lancer : { node, cli } ou null (plugin incomplet). Celui du plugin
+// (<plugin>/builder/bin/cli.mjs), ou OTTHO_PIPELINE_CLI (tests) ; node : celui qui exécute ce hook.
+export function engineOf(env, pluginRoot = pluginRootOf(env)) {
+  const cli = env.OTTHO_PIPELINE_CLI || join(pluginRoot, "builder", "bin", "cli.mjs");
+  return isFile(cli) ? { node: process.execPath, cli: resolve(cli) } : null;
 }
 
 // Adresse du Builder de ce projet (premier port qui répond pour lui), ou null.
@@ -345,7 +338,7 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
   // Même forme que le --project du Builder : chemin absolu, sans « / » final, liens non résolus.
   const dir = resolve(cwd, given);
   const probed = (typeof values.ports === "string" && parsePorts(values.ports)) || ports;
-  const pluginRoot = resolve(env.CLAUDE_PLUGIN_ROOT || PLUGIN_ROOT);
+  const pluginRoot = pluginRootOf(env);
   // Contexte compacté ou effacé en pleine session : pas de navigateur qui surgit.
   const noOpen = !force && (payload.source === "compact" || payload.source === "clear");
   const say = (systemMessage, additionalContext) => {
@@ -362,7 +355,7 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
   }
   if (!isDir) return force ? `Ottho Builder 2 : dossier de projet introuvable : ${dir}\n` : "";
 
-  const engine = engineOf(env);
+  const engine = engineOf(env, pluginRoot);
   let url = await findBuilder(dir, probed);
   if (url) {
     if (force) {

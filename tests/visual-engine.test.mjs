@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { lutimes, mkdir, mkdtemp, readdir, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -8,10 +9,13 @@ import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { NOT_FOUND, NOT_STARTED, PORTS, STARTING, STARTING_NO_OPEN, UNSAFE, engineOf, isOtthoProject, main, parsePorts, shellQuote } from "../scripts/visual-engine.mjs";
+import { NOT_FOUND, NOT_STARTED, PORTS, STARTING, STARTING_NO_OPEN, UNSAFE, engineOf, isOtthoProject, main, parsePorts, pluginRootOf, shellQuote } from "../scripts/visual-engine.mjs";
 
 const SCRIPT = fileURLToPath(new URL("../scripts/visual-engine.mjs", import.meta.url));
 const PLUGIN = dirname(dirname(SCRIPT));
+// Builder livré avec le plugin : jamais lancé par ces tests (OTTHO_PIPELINE_CLI, faux plugin
+// ou lancement intercepté).
+const BUILDER_CLI = join(PLUGIN, "builder", "bin", "cli.mjs");
 // Les vrais Builders de l'utilisateur écoutent sur 4317 à 4326 : jamais sondés ici.
 const assertTestPort = (port) => assert.ok(!PORTS.includes(port), `port réservé aux vrais Builders : ${port}`);
 
@@ -66,6 +70,14 @@ createServer((req, res) => {
   res.end(JSON.stringify({ ok: true, app: "ottho-pipeline", project }));
 }).listen(Number(process.env.FAKE_PORT), "127.0.0.1");
 `;
+
+// Faux plugin : la fausse CLI à la place de builder/bin/cli.mjs (withBuilder false : plugin incomplet).
+async function fakePlugin(dir, { withBuilder = true } = {}) {
+  await mkdir(join(dir, "builder", "bin"), { recursive: true });
+  const cli = join(dir, "builder", "bin", "cli.mjs");
+  if (withBuilder) await writeFile(cli, FAKE_CLI);
+  return { dir, cli };
+}
 
 // Projet temporaire (files : chemin → contenu, null pour un dossier), faux home, fausse CLI.
 // name : nom du dossier du projet.
@@ -180,31 +192,58 @@ test("dossier qui n'est pas un projet Ottho : rien n'est lancé ni affiché (un 
   assert.ok(!existsSync(join(ctx.dir, ".claude")));
 });
 
-test("dossier neuf (fichiers cachés seulement) : lancé ; engine.json au node disparu, « / » final, CLAUDE_PLUGIN_ROOT", async (t) => {
+test("dossier neuf (fichiers cachés seulement) : lancé ; Builder du plugin de CLAUDE_PLUGIN_ROOT, « / » final", async (t) => {
   const ctx = await setup(t, { files: { ".DS_Store": "", ".git/HEAD": "ref: refs/heads/main" } });
   const { OTTHO_PIPELINE_CLI, ...env } = ctx.env;
-  await writeFile(join(ctx.home, "engine.json"), JSON.stringify({ node: join(ctx.root, "node-disparu"), cli: ctx.cli }));
-  const plugin = join(ctx.root, "plugins", "ottho-code-app");
-  const out = JSON.parse(await main({ stdin: "", env: { ...env, CLAUDE_PROJECT_DIR: `${ctx.dir}/`, CLAUDE_PLUGIN_ROOT: plugin }, ports: [ctx.port] }));
+  const plugin = await fakePlugin(join(ctx.root, "plugins", "ottho-code-app"));
+  const out = JSON.parse(await main({ stdin: "", env: { ...env, CLAUDE_PROJECT_DIR: `${ctx.dir}/`, CLAUDE_PLUGIN_ROOT: plugin.dir }, ports: [ctx.port] }));
   assert.equal(out.systemMessage, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}`);
-  assert.deepEqual(recorded(ctx).argv, ["--project", ctx.dir, "--plugin", plugin, "--idle-exit", "30"]);
+  assert.deepEqual(recorded(ctx).argv, ["--project", ctx.dir, "--plugin", plugin.dir, "--idle-exit", "30"]);
   const context = out.hookSpecificOutput.additionalContext;
-  assert.ok(context.includes(`'${process.execPath}' '${ctx.cli}' brief --project '${ctx.dir}'`), "node du hook à la place du node disparu");
-  assert.ok(context.includes(`node '${join(plugin, "scripts", "visual-engine.mjs")}' --open`));
+  assert.ok(context.includes(`'${process.execPath}' '${plugin.cli}' brief --project '${ctx.dir}'`), "node du hook, Builder du plugin");
+  assert.ok(context.includes(`node '${join(plugin.dir, "scripts", "visual-engine.mjs")}' --open`));
 });
 
-test("Builder introuvable (ni OTTHO_PIPELINE_CLI ni engine.json) : message d'enregistrement (--install), code 0", async (t) => {
+test("sans OTTHO_PIPELINE_CLI ni CLAUDE_PLUGIN_ROOT : le Builder inclus dans le plugin de ce script (builder/bin/cli.mjs), lancé par le node du hook", async (t) => {
+  const ctx = await setup(t, { files: { "docs/PRD.md": "# PRD" } });
+  const { OTTHO_PIPELINE_CLI, ...env } = ctx.env;
+  assert.ok(existsSync(BUILDER_CLI), "le Builder est livré avec le plugin");
+  assert.equal(pluginRootOf(env), PLUGIN);
+  assert.deepEqual(engineOf(env), { node: process.execPath, cli: BUILDER_CLI });
+  // Lancement intercepté : le vrai Builder ne démarre jamais ici, un faux répond à sa place.
+  const spawned = [];
+  let builder;
+  t.after(() => builder?.close());
+  const spawnFn = (command, args, options) => {
+    spawned.push({ command, args, cwd: options.cwd, detached: options.detached });
+    const child = new EventEmitter();
+    child.unref = () => {};
+    fakeBuilder(ctx.dir, ctx.port).then((b) => (builder = b));
+    return child;
+  };
+  const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir, "compact"), env, ports: [ctx.port], spawnFn }));
+  assert.equal(out.systemMessage, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}`);
+  assert.deepEqual(spawned, [
+    { command: process.execPath, args: [BUILDER_CLI, "--project", ctx.dir, "--plugin", PLUGIN, "--idle-exit", "30", "--no-open"], cwd: ctx.dir, detached: true },
+  ]);
+  assert.ok(out.hookSpecificOutput.additionalContext.includes(`'${process.execPath}' '${BUILDER_CLI}' brief --project '${ctx.dir}'`));
+  assert.deepEqual(launches(ctx), []);
+});
+
+test("plugin incomplet (builder/bin/cli.mjs absent) : message qui le dit, code 0, rien de créé", async (t) => {
   const ctx = await setup(t, { files: { "specs/US-01-inscription.md": "# US-01" } });
-  const res = await runScript(["--ports", String(ctx.port)], { input: sessionStart(ctx.dir), env: { HOME: ctx.root, OTTHO_PIPELINE_HOME: ctx.home }, cwd: ctx.root });
+  const incomplete = await fakePlugin(join(ctx.root, "plugin-incomplet"), { withBuilder: false });
+  const res = await runScript(["--ports", String(ctx.port)], { input: sessionStart(ctx.dir), env: { HOME: ctx.root, OTTHO_PIPELINE_HOME: ctx.home, CLAUDE_PLUGIN_ROOT: incomplete.dir }, cwd: ctx.root });
   assert.equal(res.code, 0);
   assert.equal(res.stderr, "");
   assert.deepEqual(JSON.parse(res.stdout), { systemMessage: NOT_FOUND });
+  assert.doesNotMatch(NOT_FOUND, /npx|--install|engine\.json|[—–]/);
   assert.ok(!existsSync(join(ctx.dir, ".claude")));
-  // engine.json qui désigne une CLI disparue : introuvable aussi.
-  await writeFile(join(ctx.home, "engine.json"), JSON.stringify({ node: process.execPath, cli: join(ctx.root, "disparu.mjs") }));
-  assert.equal(engineOf({ OTTHO_PIPELINE_HOME: ctx.home }), null);
-  await writeFile(join(ctx.home, "engine.json"), "{ illisible");
-  assert.equal(engineOf({ OTTHO_PIPELINE_HOME: ctx.home }), null);
+  assert.equal(engineOf({}, incomplete.dir), null);
+  // builder/bin/cli.mjs qui est un dossier, ou OTTHO_PIPELINE_CLI disparue : introuvable aussi.
+  await mkdir(incomplete.cli);
+  assert.equal(engineOf({}, incomplete.dir), null);
+  assert.equal(engineOf({ OTTHO_PIPELINE_CLI: join(ctx.root, "disparu.mjs") }, PLUGIN), null);
 });
 
 test("message de hook invalide ou vide : code 0, rien sur stdout ni stderr", async (t) => {
@@ -235,8 +274,10 @@ test("--open, Builder absent hors projet Ottho : lancé quand même, il ouvre lu
   assert.equal(out, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}\n`);
   assert.deepEqual(opened, []);
   assert.equal(recorded(ctx).argv[1], ctx.dir);
-  // Introuvable : la ligne d'enregistrement (--install).
-  assert.equal(await main({ argv: ["--open", "--project", ctx.dir], env: { HOME: ctx.root, OTTHO_PIPELINE_HOME: ctx.home }, ports: [await freePort()], open: (u) => opened.push(u) }), `${NOT_FOUND}\n`);
+  // Plugin incomplet : la ligne qui le dit.
+  const incomplete = await fakePlugin(join(ctx.root, "plugin-incomplet"), { withBuilder: false });
+  const env = { HOME: ctx.root, OTTHO_PIPELINE_HOME: ctx.home, CLAUDE_PLUGIN_ROOT: incomplete.dir };
+  assert.equal(await main({ argv: ["--open", "--project", ctx.dir], env, ports: [await freePort()], open: (u) => opened.push(u) }), `${NOT_FOUND}\n`);
 });
 
 test("deux hooks simultanés du même projet : un seul lancement, la même adresse pour les deux", async (t) => {
@@ -328,14 +369,15 @@ test("Builder lancé qui s'arrête aussitôt : message « n'a pas démarré », 
 
 test("chemins avec espace, apostrophe, guillemet et $ : commandes du contexte valides pour le shell", async (t) => {
   const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" }, name: `projet d'Ottho "v2" $HOME \`x\`` });
-  const plugin = join(ctx.root, "plug'in $PATH");
+  const { dir: plugin, cli } = await fakePlugin(join(ctx.root, "plug'in $PATH"));
+  const { OTTHO_PIPELINE_CLI, ...env } = ctx.env;
   const builder = await fakeBuilder(ctx.dir);
   t.after(builder.close);
-  const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir), env: { ...ctx.env, CLAUDE_PLUGIN_ROOT: plugin }, ports: [builder.port] }));
+  const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir), env: { ...env, CLAUDE_PLUGIN_ROOT: plugin }, ports: [builder.port] }));
   assert.equal(out.systemMessage, `Ottho Builder 2 : ${builder.url}`);
   const lines = out.hookSpecificOutput.additionalContext.split("\n");
   const brief = lines.find((l) => l.startsWith("Pour écrire le brief")).replace(/^[^:]*: /, "").replace(/ suivi d'une seule option.*$/, "");
-  assert.deepEqual(shellArgs(`x ${brief}`), [process.execPath, ctx.cli, "brief", "--project", ctx.dir]);
+  assert.deepEqual(shellArgs(`x ${brief}`), [process.execPath, cli, "brief", "--project", ctx.dir]);
   const reopen = lines.find((l) => l.startsWith("Pour rouvrir")).replace(/^.*premier plan : /, "");
   assert.deepEqual(shellArgs(reopen), [join(plugin, "scripts", "visual-engine.mjs"), "--open", "--project", ctx.dir]);
   assert.equal(shellQuote("l'a"), `'l'\\''a'`);
@@ -351,14 +393,6 @@ test("--open sur un dossier de projet introuvable : une ligne d'erreur, code 0, 
   // En hook : silencieux.
   assert.equal(await main({ stdin: sessionStart(missing), env: { ...ctx.env, CLAUDE_PROJECT_DIR: missing }, ports: [ctx.port] }), "");
   assert.ok(!existsSync(missing));
-});
-
-test("engineOf : engine.json lu dans le HOME de l'environnement donné si OTTHO_PIPELINE_HOME est absent", async (t) => {
-  const ctx = await setup(t);
-  await mkdir(join(ctx.root, ".ottho-pipeline"));
-  await writeFile(join(ctx.root, ".ottho-pipeline", "engine.json"), JSON.stringify({ node: process.execPath, cli: ctx.cli }));
-  assert.deepEqual(engineOf({ HOME: ctx.root }), { node: process.execPath, cli: ctx.cli });
-  assert.equal(engineOf({ HOME: ctx.home }), null);
 });
 
 test("isOtthoProject : marqueurs du pipeline, spec US ou dossier neuf ; jamais le journal du plugin seul ni le dossier personnel", async (t) => {
