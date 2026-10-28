@@ -123,4 +123,11 @@ Comment on sait que le produit fonctionne :
 
 ## 9. Prochaine étape
 
-→ Invoquer `architect` pour définir la stack, le schéma BDD initial, et les conventions de code.
+→ Invoquer `designer` sans attendre : il demande (ou propose) la charte graphique et les maquettes existantes, puis dessine les écrans clés du parcours principal une fois ce PRD et la charte validés.
+→ Ensuite `architect` : stack, schéma BDD initial et conventions de code, à partir du PRD, de la charte et des maquettes. (Projet sans interface : directement `architect`.)
+
+---
+
+## Historique
+
+- {{DATE}} : Création par `spec-writer`.

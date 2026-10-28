@@ -2,6 +2,59 @@
 
 Tous les changements notables de ce plugin sont documentés ici. Format basé sur [Keep a Changelog](https://keepachangelog.com/) et le plugin respecte le [SemVer](https://semver.org/).
 
+## [1.2.0] — 2026-10-28
+
+### Ajouté
+
+- **Ottho Builder 2 inclus dans le plugin (dossier builder/), plus rien à installer** : le hook de démarrage lance `builder/bin/cli.mjs` avec le Node qui l'exécute (plugin : `CLAUDE_PLUGIN_ROOT`) ; serveur sans dépendance, interface déjà construite (`builder/dist/`, versionné), jamais publié sur npm. Plus de `npx ottho-pipeline --install` ni de `~/.ottho-pipeline/engine.json` ; `~/.ottho-pipeline/briefs` garde les exemples de brief. `builder/bin/cli.mjs` absent : le hook signale un plugin incomplet. Tests serveur du Builder dans `node --test` à la racine.
+- **Ottho Builder 2 lancé au démarrage de Claude Code** (hook `SessionStart`, `scripts/visual-engine.mjs`) : retrouve le Builder du projet (ports 4317 à 4326) ou, dans un projet Ottho (`docs/brief.md`, `docs/PRD.md`, `design/charte.md` ou une spec `specs/US-*.md`) ou un dossier neuf, jamais dans le dossier personnel, le démarre détaché (`--idle-exit 30`, journal `.claude/ottho-builder.log`, jamais écrit à travers un lien symbolique) ; adresse affichée à l'utilisateur, commandes du brief et de réouverture données à Claude. Verrou `.claude/ottho-builder.lock` (deux sessions simultanées : un seul Builder) ; après `compact` ou `clear`, lancé sans ouvrir le navigateur. Jamais bloquant.
+- **Panneau « Équipe » dans Claude Code** (module de hooks `hooks/equipe/register.tsx`, déclaré dans `hooks/hooks.json` sous `modules`, état typé dans `types/index.d.ts`) : lit `/api/state` du Builder de ce projet (ports 4317 à 4326) toutes les 4 secondes et affiche les étapes de la feature en cours, ce qui attend l'utilisateur (questions sans réponse, livrables à valider, prochaine étape, agent silencieux depuis 8 min) avec un bouton qui prépare le message dans la zone de saisie sans l'envoyer, et les 10 agents (robot, statut, passages, dernières actions). S'ouvre seul une fois quand un Builder suit le projet, sinon `/equipe`. Garde le Builder en vie (`/api/health?project=`). Têtes des robots intégrées (`hooks/equipe/heads.ts`, généré depuis `builder/web/src/assets/robots/heads/`). Tests : `tests/equipe.test.tsx` (`claude plugin test`). Exige les modules de hooks de Claude Code (accès anticipé).
+- **Panneau « Agents Ottho » dans Claude Code** (module `hooks/agents-pane/register.tsx`, commande `/ottho-agents`) : les agents du pipeline lus dans `.claude/pipeline-events.jsonl`, sans Ottho Builder 2 (en cours avec ce qu'il fait, terminé avec verdict, interrompu, au repos ; attente de Claude ; prochaine étape), et notifications au démarrage, à la fin d'un agent et quand Claude attend. S'ouvre seul dans un projet Ottho, jamais sous `claude -p`. Les deux panneaux passent par un point d'entrée unique, `hooks/register.tsx`.
+- **Choix « Suivre tes recos »** sur chaque question du sélecteur (`AskUserQuestion`, ajouté par `answered-guard` via `updatedInput`) : l'IA tranche selon sa recommandation et la consigne dans le livrable.
+
+- **Commande `/pipeline`** (6e commande) : rouvre Ottho Builder 2 dans le navigateur, ou le démarre s'il ne tourne pas (`scripts/visual-engine.mjs --open`) ; rien à lancer dans un terminal à part.
+- **Hooks `PreToolUse` / `PostToolUse` sur les sub-agents** : journalisent début, fin, agent recommandé, verdict et questions du bloc « Questions pour toi » dans `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquant, sans effet si Node est absent).
+
+### Modifié
+
+- **Les 10 agents** : section « Questions pour l'utilisateur » (bloc `Questions pour toi :` en fin de réponse quand une réponse est nécessaire pour avancer).
+- **Agent `tester`** : termine toujours par `Verdict tests : VERTS` ou `Verdict tests : ROUGES`.
+- **Agent `designer`** : maquettes dans Claude Design (outil `Artifact`) si le compte l'a, sinon Pencil (noms d'outils mis à jour pour le serveur Pencil actuel : `get_app_state`, `read_skill`, `get_style`, `execute`), sinon texte. Livrable `/design/US-XX-<slug>.md` avec la ligne `> Maquettes : …` ; copie des écrans du canevas dans `/design/US-XX-<slug>/` (aperçu dans Ottho Builder 2).
+- **Agent `developer`** : lit les maquettes du designer (outil `Artifact` en lecture, ou serveur Pencil) et applique `/design/charte.md`.
+- **Éléments de marque** : `/design/assets/` (logo, images, polices, charte en PDF glissés dans le terminal Claude Code, copiés par Claude ; Ottho Builder 2 les affiche) ; lus par le designer (charte, assets du canevas) et repris par le développeur.
+- **Charte graphique** : `/design/charte.md` (source, dans le dépôt) + design system Claude Design tiré d'elle et installé dans chaque canevas. Sans charte, le designer la demande toujours d'abord (couleurs, polices, logo, références) et s'arrête ; il n'en propose une que si l'utilisateur n'en a pas, puis attend sa validation avant toute maquette.
+- **Agent `spec-writer`** : questions ouvertes au format `- [ ] question ?`, reprise de `docs/questions/US-XX.md`, passage de main au format standard « Prochaine étape recommandée ».
+- **Template `.gitignore`** : ignore `.claude/pipeline-events.jsonl`.
+
+- **Questions du terminal central dans le pipeline** : hooks `Stop` (questions de fin de tour de la session principale : bloc « Questions pour toi », liste de questions ou dernière phrase interrogative), `UserPromptSubmit` (l'utilisateur a répondu, sans le contenu de son message) et `Notification` `permission_prompt` (Claude attend une autorisation). L'app les affiche en notification ; l'utilisateur répond dans son terminal Claude Code.
+
+- **Brief du projet** : écrit dans le terminal, étape 0 de `project-bootstrap` (exemple enregistré, ou les six blocs du canevas du module « De l'idée au projet validé » posés un par un, puis commande `brief` du Builder : `--list`, `--preset <nom>`, `--json <fichier>`). `brainstorming` part de `docs/brief.md`, coche les critères de chaque bloc et ne pose que les questions qui manquent ; `spec-writer` s'en sert pour le PRD ; `project-bootstrap` le transmet et fait écrire `docs/architecture.md`. Le modèle de PRD a une section « Historique ».
+
+- **Ottho Builder 2 en lecture seule** (seul son panneau Config écrit, dans `.env.local`) : les validations se donnent dans le terminal et Claude les consigne en fin de section « Historique » du livrable (`- AAAA-MM-JJ : Validé par l'utilisateur.`, lue par l'app) ; les fichiers de marque glissés dans le terminal sont copiés dans `design/assets/`. Skills `agency-method`, `project-bootstrap`, `sdd-feature-cycle`, agents `designer`, `brainstorming`, `spec-writer` et README mis à jour.
+
+### Corrigé
+
+- **Maquettes : Claude Design uniquement** (Pencil retiré de `designer` et `developer`). La session principale lance `designer` au premier plan : la publication du canevas demande l'autorisation de l'utilisateur, et le canevas s'ouvre dans son navigateur (en arrière-plan, elle était refusée). Consignes pour le niveau projet (canevas « <Projet> : écrans clés », copie dans `design/projet/`) ; sans `Artifact` ou publication refusée, canevas prêt à publier (`*.dc.html` + `canvas.json`) et demande de publication à la session principale, jamais de Pencil ni de page HTML unique.
+
+- **Après le PRD, spec-writer recommandait `architect`** (et le modèle de PRD aussi) : le designer était sauté. Il est désormais recommandé dès que le PRD est écrit (ou la spec d'une feature avec interface) : il demande ou propose la charte et les maquettes pendant la relecture du PRD ; `architect` vient ensuite.
+
+- **Le designer ne demandait jamais les maquettes existantes** : il les demande désormais avec la charte (liens Figma, Claude Design, Pencil, ou images et PDF glissés dans le terminal) et part d'elles s'il y en a, au lieu de tout redessiner.
+
+- **Notification « Claude attend ton autorisation » qui restait affichée** : après une demande d'autorisation, le premier outil exécuté par la session principale journalise une reprise (`resume`, marqueur `.claude/ottho-waiting`).
+
+- **Le designer n'intervenait pas au démarrage d'un projet** : `project-bootstrap` et `/init-agency-project` passent en 5 étapes, avec `designer` (charte demandée d'abord, design system, maquettes des écrans clés) entre le PRD et l'architecture.
+- **Questions : un seul canal, le terminal** (plus de double réponse app / terminal). `PreToolUse` `AskUserQuestion` journalise les questions posées (Ottho Builder 2 les affiche) ; la méthode demande de consigner chaque réponse dans le livrable concerné.
+
+- **Réponses consignées dans les fichiers du projet ignorées par la session principale** (elle lançait l'agent suivant avec ses propres hypothèses) : à chaque message de l'utilisateur, `answered-guard` ajoute au contexte les réponses consignées depuis le dernier tour, qui priment sur toute hypothèse. Chaque agent fait primer les réponses consignées sur les hypothèses de sa demande et signale les contradictions.
+
+- **Questions reposées dans le terminal alors que l'utilisateur y avait déjà répondu** (réponse consignée dans le livrable) : nouveau hook `PreToolUse` `AskUserQuestion` (`scripts/answered-guard.mjs`) qui lit les réponses consignées (`docs/questions/*.md`, specs, PRD), refuse les questions déjà répondues et donne les réponses à Claude ; il ne repose que les autres. Dans l'autre sens, `PostToolUse` `AskUserQuestion` journalise les réponses données dans le sélecteur (événement `answered`) pour que l'app ne les laisse pas en attente. Consigne ajoutée au skill `agency-method`.
+
+- **Questions coupées à 300 caractères** : une question longue (avec sa recommandation) arrivait tronquée dans le pipeline. Limite portée à 2 000 caractères, coupe sur un mot entier avec « … » au-delà ; une question numérotée suivie d'une recommandation est reconnue.
+
+- **Les agents peuvent enfin utiliser les MCP que leurs consignes citent.** La ligne `tools:` d'un sous-agent est une liste fermée : devops, developer, architect, spec-writer, doc-writer et brainstorming parlaient de GitHub, Vercel, Supabase, Context7 ou Notion sans y avoir accès. Chaque agent reçoit désormais les services de son métier, par serveur entier (`mcp__supabase`) et sous le nom du connecteur claude.ai (`mcp__claude_ai_Supabase`). security-auditor ne dépend plus du nom exact du serveur Supabase.
+- **Actions payantes ou destructives retirées** (`disallowedTools`) : créer un projet ou une branche Supabase, confirmer un coût, fusionner, réinitialiser, mettre en pause ; achats Vercel. architect et security-auditor lisent Supabase sans pouvoir l'écrire. Stripe : compte de test exigé, arrêt sur `livemode: true`.
+- README : colonne « Utilisé par », garde-fous (`?project_ref=` du projet de dev, noms de serveurs à garder), conduite quand un service manque. Test `tests/agents-tools.test.mjs` : cohérence entre consignes et outils accordés.
+
 ## [1.1.0] — 2026-07-21
 
 ### Ajouté

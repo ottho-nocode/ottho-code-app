@@ -11,6 +11,7 @@ Quand l'utilisateur demande à **ajouter une fonctionnalité** / **nouvelle feat
 
 - **4 phases strictes** : Specify → Plan → Implement → Validate.
 - **Validation humaine obligatoire** entre chaque phase. Ne passe **jamais** à la phase suivante sans un OK explicite.
+- **Validation donnée dans le terminal** : consigne-la à la fin de la section `## Historique` du livrable validé (spec, maquettes, plan) avec la ligne `- AAAA-MM-JJ : Validé par l'utilisateur.` ; Ottho Builder 2 la lit (voir `agency-method`, « Validations »).
 - **Une branche par feature** : `feature/US-XX-slug` créée depuis `develop`.
 - **Une fiche spec + un plan + des tests + de la doc** par feature.
 
@@ -71,3 +72,7 @@ code-reviewer → tester                                       ← Phase Validat
    ↓
 doc-writer → /ship-feature                                   ← Post-Validate
 ```
+
+## Designer : au premier plan
+
+**Lance `designer` au premier plan, jamais en arrière-plan** (`run_in_background: false`) : il publie un canevas Claude Design (outil `Artifact`), ce qui demande l'autorisation de l'utilisateur, et le canevas s'ouvre alors dans son navigateur. En arrière-plan, la publication est refusée et il n'y a pas de maquettes visibles.

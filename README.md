@@ -12,10 +12,12 @@ Agences et freelances qui construisent des apps web (Next.js + Supabase + Brevo/
 
 - **10 agents spécialisés** qui couvrent le cycle de vie d'une feature : Brainstorming, Spec-Writer, Designer, Architect, Developer, Code-Reviewer, Tester, DevOps, Doc-Writer, Security-Auditor.
 - **4 skills** qui orchestrent : `agency-method` (référence), `project-bootstrap` (démarrage projet), `sdd-feature-cycle` (cycle feature), `security-checklist` (contrôle avant mise en ligne).
-- **5 slash commands** : `/init-agency-project`, `/new-feature`, `/validate-feature`, `/audit-securite`, `/ship-feature`.
+- **6 slash commands** : `/init-agency-project`, `/new-feature`, `/validate-feature`, `/audit-securite`, `/ship-feature`, `/pipeline`.
 - **9 MCP recommandés** — non installés par défaut : GitHub, Vercel, Supabase, Stripe, Brevo, Resend, Notion, Figma, Context7. À ajouter par projet, voir [Les 9 MCP recommandés](#les-9-mcp-recommandés-non-installés-par-défaut). (Pencil : fourni par l'app desktop [pencil.dev](https://pencil.dev), pas par le plugin.)
 - **3 hooks de sécurité Git** : branch-guard (anti-commit direct main/develop), git-safe (anti-reset --hard / push --force), secret-scan (anti-fuite de clés API).
 - **5 templates** : CLAUDE.md, PRD, fiche feature SDD, plan technique, .gitignore.
+- **Panneau « Équipe » dans Claude Code** : le robot de chaque agent, son déroulé en direct et les validations qui t'attendent, à côté de la conversation (commande `/equipe`).
+- **Ottho Builder 2 inclus** (dossier `builder/`) : la vue du pipeline des agents dans le navigateur, ouverte au démarrage de Claude Code (commande `/pipeline`). Rien à installer : Node 20 ou plus suffit, l'interface est déjà construite.
 
 ---
 
@@ -88,6 +90,57 @@ Met à jour la doc, push, ouvre la PR vers `develop`.
 
 Lance `security-auditor` sur tout le projet (secrets, RLS + advisors Supabase, code mort) et écrit le rapport classé dans `/reviews/security-audit.md`. À dérouler avant une mise en ligne, avec le skill `security-checklist`.
 
+### Voir le pipeline (Ottho Builder 2)
+
+Ottho Builder 2 s'ouvre tout seul dans le navigateur au démarrage de Claude Code, dans un projet Ottho (brief, PRD, charte ou spec `specs/US-*.md`) ou un dossier vide, jamais dans le dossier personnel (hook `SessionStart`, `scripts/visual-engine.mjs`). Il s'arrête 30 min après la fermeture de son dernier onglet ; la session suivante le relance. Pour le rouvrir :
+
+```
+/pipeline
+```
+
+C'est une vue **en lecture seule** : carte des agents, agent en cours et ce qu'il fait en direct, avancement de chaque `US-XX`, brief du projet, questions en attente, livrables à valider, éléments de marque (logo, polices…). Tout le reste se fait dans le terminal Claude Code :
+
+- **brief du projet** : Claude pose les six blocs du canevas (ou applique un exemple enregistré) et l'écrit dans `docs/brief.md` avec la commande `brief` du Builder ;
+- **questions des agents** : réponse dans le terminal, consignée par Claude dans le livrable (« Questions ouvertes ») ;
+- **validations** : « je valide le PRD » dans le terminal ; Claude ajoute `- AAAA-MM-JJ : Validé par l'utilisateur.` à l'« Historique » du livrable, que l'app lit ;
+- **fichiers de marque** : glissés dans le terminal, copiés par Claude dans `design/assets/`.
+
+Seul son panneau Config écrit : les variables d'environnement du projet, dans `.env.local`. La vue est alimentée par les hooks du plugin (`scripts/pipeline-event.mjs`), qui écrivent `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquants).
+
+Ottho Builder 2 est inclus dans le plugin (dossier `builder/`, interface déjà construite, serveur sans dépendance) : rien à installer ni à enregistrer, le hook de démarrage le lance avec le Node de la machine (20 ou plus). Les exemples de brief restent dans `~/.ottho-pipeline/briefs` ; un ancien `~/.ottho-pipeline/engine.json` (versions précédentes) ne sert plus et peut être supprimé. Détails et lancement à la main : `builder/README.md`.
+
+### Panneau « Équipe » dans Claude Code
+
+Dans un projet suivi par Ottho Builder 2, un panneau « Équipe » s'ouvre aussi dans Claude Code, à côté de la conversation (module de hooks `hooks/equipe/register.tsx`). Il reprend l'essentiel du Builder et se met à jour toutes les 4 secondes :
+
+- les étapes de la feature en cours : Spec, Plan, Code, Revue, Tests, Fusion ;
+- **À toi de jouer** : les questions des agents sans réponse, les livrables à valider et la prochaine étape. Le bouton « Préparer le message » écrit le bon message dans la zone de saisie, sans l'envoyer : tu relis, puis tu appuies sur Entrée ;
+- **L'équipe** : le robot de chaque agent, son statut (travaille depuis…, terminé, interrompu, sans nouvelles depuis 8 min), son nombre de passages et ses dernières actions en direct.
+
+Il ne s'ouvre de lui-même que si Ottho Builder 2 suit le projet. Pour le rouvrir :
+
+```
+/equipe
+```
+
+Tant qu'il est ouvert, il garde Ottho Builder 2 en vie, comme un onglet du navigateur. Comme le Builder, il est en lecture seule.
+
+### Panneau « Agents Ottho » dans Claude Code
+
+Un second panneau, « Agents Ottho » (module `hooks/agents-pane/register.tsx`), suit les agents **sans Ottho Builder 2** : il lit directement le journal du plugin, `.claude/pipeline-events.jsonl`, dès qu'un agent démarre, agit ou termine.
+
+- une ligne par agent du pipeline : en cours (US, depuis combien de temps, ce qu'il fait : « lit specs/US-02.md »), terminé (il y a combien de temps, verdict), interrompu (sans nouvelles depuis 30 min) ou au repos ;
+- en bas : « Claude attend ta réponse » (ou ton autorisation) dans le terminal, et la prochaine étape recommandée ;
+- des **notifications** : un agent démarre, un agent a fini (verdict et suite), Claude attend ta réponse.
+
+Il s'ouvre de lui-même dans un projet Ottho (`docs/brief.md`, `docs/PRD.md`, `design/charte.md` ou une spec `specs/US-*.md`) quand le terminal est assez large, jamais sous `claude -p`. Pour l'ouvrir :
+
+```
+/ottho-agents
+```
+
+Prérequis des deux panneaux : Claude Code 2.1.287 ou plus dans le terminal (2.1.286 pour l'app Desktop), versions où les mods (modules de hooks) sont activés par défaut ; testés avec Claude Code 2.1.289. Plus ancien, les panneaux n'apparaissent pas : mets Claude Code à jour (`claude update`). Le reste du plugin n'en dépend pas.
+
 ---
 
 ## Cycle SDD à 2 niveaux
@@ -95,9 +148,9 @@ Lance `security-auditor` sur tout le projet (secrets, RLS + advisors Supabase, c
 ### Niveau Projet (one-shot, au démarrage)
 
 ```
-brainstorming → spec-writer → architect → devops
-   vision/        PRD          stack/      CI/CD/
-   personas      global        BDD         infra
+brainstorming → spec-writer → designer → architect → devops
+   vision/        PRD          charte/     stack/      CI/CD/
+   personas      global        maquettes   BDD         infra
 ```
 
 ### Niveau Feature (répété par US)
@@ -139,17 +192,32 @@ brainstorming → spec-writer → architect → devops
 
 **Le plugin n'embarque aucun serveur MCP.** Chaque projet ajoute les siens : copie un des blocs ci-dessous dans le `.mcp.json` à la racine du projet, ou ajoute-les un par un avec `claude mcp add`. Avantages : pas de serveurs « Failed to connect » fantômes dans les projets qui n'en ont pas l'usage, et des credentials gérés par projet.
 
-| MCP | Usage | Authentification |
-|---|---|---|
-| `github` | Issues, PR, commits | PAT GitHub dans le header `Authorization` |
-| `vercel` | Déploiements, preview URLs | OAuth : `/mcp` puis authentifier |
-| `supabase` | BDD, migrations, types | OAuth : `/mcp` puis authentifier |
-| `stripe` | Paiements, customers, prices | OAuth : `/mcp` puis authentifier |
-| `brevo` | Emails transactionnels (défaut) | API key dans le header `api-key` |
-| `resend` | Emails (alternative à Brevo) | API key dans le header `Authorization` |
-| `notion` | Page projet source de vérité | OAuth : `/mcp` puis authentifier |
-| `figma` | Maquettes, design tokens | OAuth : `/mcp` puis authentifier |
-| `context7` | Doc technique à jour | aucune |
+| MCP | Usage | Authentification | Utilisé par |
+|---|---|---|---|
+| `github` | Issues, PR, commits | PAT GitHub dans le header `Authorization` | devops |
+| `vercel` | Déploiements, preview URLs | OAuth : `/mcp` puis authentifier | devops |
+| `supabase` | BDD, migrations, types | OAuth : `/mcp` puis authentifier | developer, devops ; architect et security-auditor en lecture |
+| `stripe` | Paiements, customers, prices | OAuth : `/mcp` puis authentifier | developer |
+| `brevo` | Emails transactionnels (défaut) | API key dans le header `api-key` | developer |
+| `resend` | Emails (alternative à Brevo) | API key dans le header `Authorization` | developer |
+| `notion` | Page projet source de vérité | OAuth : `/mcp` puis authentifier | brainstorming, spec-writer, developer, doc-writer |
+| `figma` | Maquettes, design tokens | OAuth : `/mcp` puis authentifier | designer |
+| `context7` | Doc technique à jour | aucune | architect, developer |
+
+### Ce que chaque agent peut faire
+
+Un sous-agent ne voit que les outils de sa ligne `tools:`. Chaque agent reçoit donc les services de son métier (colonne ci-dessus), et rien d'autre. Quelques actions restent **retirées** à tous les agents (`disallowedTools`) et reviennent à l'humain :
+
+- **Supabase** : créer un projet ou une branche, confirmer un coût, fusionner, réinitialiser, mettre en pause ou restaurer ; `developer` ne déploie pas non plus d'edge function. `architect` et `security-auditor` n'ont que des outils de lecture (tables, migrations, conseils de sécurité).
+- **Vercel** : acheter un domaine, des crédits ou un abonnement.
+- **Stripe** : aucun outil n'est retiré, la protection est le compte branché. Connecte un compte de **test** (sandbox Stripe), jamais le compte réel ; `developer` s'arrête s'il voit `livemode: true`.
+
+### Garde-fous conseillés
+
+- **Supabase relié au projet de dev** : ajoute `?project_ref=<ref du projet de dev>` à l'URL du serveur, pour qu'aucun agent ne puisse atteindre la prod. Sur un projet où personne ne doit écrire en base (audit seul), ajoute aussi `&read_only=true`.
+- **Garde les noms du tableau** (`supabase`, `stripe`…) : les outils d'un serveur portent son nom (`mcp__supabase__list_tables`), et les agents les cherchent sous ce nom. Un serveur renommé (`supabase-dev`) est invisible pour eux.
+- **Connecteurs claude.ai** : Supabase, Stripe, Vercel, Notion et Figma branchés depuis claude.ai (outils `mcp__claude_ai_Supabase__…`) sont aussi reconnus par les agents, avec les mêmes interdictions.
+- Si un agent a besoin d'un service absent, il ne le contourne pas (pas de `curl` avec une clé) : il te le demande dans ses « Questions pour l'utilisateur ».
 
 Serveurs OAuth + Context7 (aucune clé dans le fichier) :
 
@@ -157,7 +225,7 @@ Serveurs OAuth + Context7 (aucune clé dans le fichier) :
 {
   "mcpServers": {
     "vercel":   { "type": "http", "url": "https://mcp.vercel.com" },
-    "supabase": { "type": "http", "url": "https://mcp.supabase.com/mcp" },
+    "supabase": { "type": "http", "url": "https://mcp.supabase.com/mcp?project_ref=REF_DU_PROJET_DE_DEV" },
     "stripe":   { "type": "http", "url": "https://mcp.stripe.com" },
     "notion":   { "type": "http", "url": "https://mcp.notion.com/mcp" },
     "figma":    { "type": "http", "url": "https://mcp.figma.com/mcp" },
@@ -190,7 +258,7 @@ Serveurs à clé — toujours via variables d'environnement, jamais de clé en c
 }
 ```
 
-Pour les maquettes locales, l'agent `designer` peut aussi utiliser le MCP **Pencil** : il est installé par l'application desktop [pencil.dev](https://pencil.dev), pas par ce plugin.
+Les maquettes se font dans **Claude Design** (outil `Artifact` de Claude Code) : l'agent `designer` y publie un canevas et en range une copie dans `design/projet/` ou `design/US-XX-<slug>/`, affichée par Ottho Builder 2. Pencil n'est plus utilisé.
 
 ---
 
@@ -262,6 +330,16 @@ claude plugin validate
 ```
 
 Le plugin doit passer vert. Vérifie le schéma `plugin.json`, les frontmatters d'agents/skills/commands, et `hooks/hooks.json`.
+
+Tests :
+
+```bash
+node --test                    # scripts des hooks (tests/) et serveur d'Ottho Builder 2 (builder/server/)
+claude plugin test             # panneaux de Claude Code (tests/equipe.test.tsx ; le modèle d'« Agents Ottho » est couvert par node --test)
+cd builder && npm ci && npm run typecheck && npm run build && npx playwright test   # interface d'Ottho Builder 2 et tests e2e
+```
+
+Le plugin livre l'interface d'Ottho Builder 2 déjà construite : après une modification de `builder/web/`, `npm run build` dans `builder/` puis committer `builder/dist/` avec elle.
 
 ---
 

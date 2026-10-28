@@ -1,0 +1,41 @@
+{
+  "name": "ottho-pipeline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ottho Builder 2 : pipeline visuel des agents SDD, inclus dans le plugin ottho-code-app (jamais publié sur npm).",
+  "type": "module",
+  "bin": {
+    "ottho-pipeline": "bin/cli.mjs"
+  },
+  "files": [
+    "bin",
+    "server",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test",
+    "dev:web": "vite --config web/vite.config.ts",
+    "build": "vite build --config web/vite.config.ts",
+    "typecheck": "tsc -p web",
+    "test:e2e": "npm run build && playwright test",
+    "demo": "node scripts/demo-fixture.mjs"
+  },
+  "devDependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@playwright/test": "^1.63.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@xyflow/react": "^12.12.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1"
+  }
+}

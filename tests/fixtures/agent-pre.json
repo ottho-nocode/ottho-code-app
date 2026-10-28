@@ -1,0 +1,15 @@
+{
+  "cwd": "/projet",
+  "permission_mode": "auto",
+  "effort": {
+    "level": "xhigh"
+  },
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Agent",
+  "tool_input": {
+    "description": "Rédige spec US-01",
+    "prompt": "Mode feature. Rédige la fiche fonctionnalité SDD /specs/US-01-ajouter-une-tache-a-une-liste.md (texte raccourci pour la fixture).",
+    "subagent_type": "ottho-code-app:spec-writer"
+  },
+  "tool_use_id": "toolu_01L9dqNnq7SCu14k7obDmFXx"
+}

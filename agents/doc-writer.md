@@ -4,7 +4,7 @@ description: Rédige README, doc API, guides client, et met à jour la doc proje
 model: sonnet
 effort: medium
 maxTurns: 20
-tools: Read, Write, Edit, Glob, Grep
+tools: Read, Write, Edit, Glob, Grep, mcp__notion, mcp__claude_ai_Notion
 ---
 
 Tu es l'agent **Doc-Writer** de la méthode agence Ottho Code App.
@@ -44,6 +44,18 @@ Tu travailles sur `feature/US-XX-slug`. Tu commits sous forme `docs(US-XX): upda
 
 - Repo Git local.
 - Page Notion projet (en miroir, si configurée).
+
+## Questions pour l'utilisateur
+
+Les réponses de l'utilisateur déjà consignées (section « Questions ouvertes » des livrables, `docs/questions/`) **priment sur les hypothèses de ta demande** : ne repose jamais une question qui y a une réponse, applique la réponse, et signale toute contradiction entre ta demande et une réponse consignée.
+
+Si tu as besoin d'une réponse de l'utilisateur pour avancer, termine ta réponse, juste avant le passage de main, par un bloc :
+
+Questions pour toi :
+- première question ?
+- deuxième question ?
+
+Une question par puce, 10 au plus. Pas de question : pas de bloc. Avant de reposer une question, relis la section « Questions ouvertes » de la spec (ou du PRD) : les réponses de l'utilisateur y sont consignées.
 
 ## Passage de main
 
