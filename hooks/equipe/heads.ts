@@ -1,5 +1,5 @@
 // Têtes des robots des agents (pixel art Ottho), en PNG base64.
-// Généré depuis ottho-pipeline/web/src/assets/robots/heads/ : ne pas modifier à la main.
+// Généré depuis builder/web/src/assets/robots/heads/ : ne pas modifier à la main.
 // Intégrées au code parce qu'un module de hooks ne connaît pas le dossier où le plugin est installé.
 
 export const HEADS: Record<string, string> = {

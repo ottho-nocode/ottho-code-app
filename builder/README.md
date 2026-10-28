@@ -43,7 +43,7 @@ Un seul mode à la fois. `--save` refuse un brief absent, vide ou écrit à la m
 
 Un brief vide ne remplace jamais un brief rempli ; la version remplacée est gardée dans `.claude/brief-backups/`.
 
-`~/.ottho-pipeline` ne garde que les exemples de brief (`briefs/`). Un ancien `~/.ottho-pipeline/engine.json` (écrit par `npx ottho-pipeline --install`, versions précédentes) ne sert plus : tu peux le supprimer.
+`~/.ottho-pipeline` ne garde que les exemples de brief (`briefs/`). Un ancien `~/.ottho-pipeline/engine.json` (versions précédentes) ne sert plus : tu peux le supprimer.
 
 ## Développer
 

@@ -11,7 +11,7 @@
     {
       "name": "ottho-code-app",
       "source": "./",
-      "description": "Méthode agence complète : SDD à 2 niveaux, 10 agents spécialisés (brainstorming, spec-writer, designer, architect, developer, code-reviewer, tester, devops, doc-writer, security-auditor), audit sécurité via /audit-securite, 9 MCP recommandés (non installés par défaut), 3 hooks de sécurité Git, 6 slash commands, 5 templates.",
+      "description": "Méthode agence complète : SDD à 2 niveaux, 10 agents spécialisés (brainstorming, spec-writer, designer, architect, developer, code-reviewer, tester, devops, doc-writer, security-auditor), audit sécurité via /audit-securite, 9 MCP recommandés (non installés par défaut), 3 hooks de sécurité Git, 6 slash commands, 5 templates, pipeline visuel des agents (Ottho Builder 2) inclus, rien à installer.",
       "author": {
         "name": "Ottho",
         "url": "https://ottho.co"
