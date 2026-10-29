@@ -403,3 +403,77 @@ test("arrêt automatique : un onglet fermé pendant sa connexion ne bloque pas l
   req.destroy();
   await within(stopped, 2000);
 });
+
+// Fermeture d'une session Claude Code, comme le hook SessionEnd (Node : pas d'en-tête Origin).
+const endSession = (port, body, headers = {}) =>
+  fetch(`http://127.0.0.1:${port}/api/session-end`, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) });
+
+test("arrêt avec Claude Code : la dernière session inscrite qui se ferme arrête l'app après le délai, une seule fois", async (t) => {
+  const dir = await fixture();
+  let calls = 0;
+  let ended;
+  const stopped = new Promise((ok) => (ended = ok));
+  const onSessionsEnd = () => {
+    calls++;
+    ended();
+  };
+  const app = await startApp({ projectDir: dir, pluginDir: null, distDir: dir, port: 0, claudeConfigPath: join(dir, "absent.json"), sessions: ["s1"], sessionGraceMs: 100, onSessionsEnd });
+  t.after(() => app.close());
+  const base = `http://127.0.0.1:${app.port}`;
+  // Deuxième session sur le même projet : inscrite par le health du hook.
+  assert.equal((await fetch(`${base}/api/health?project=${encodeURIComponent(dir)}&session=s2`)).status, 200);
+  assert.deepEqual(await (await endSession(app.port, { project: dir, session: "s1" })).json(), { ok: true, ended: true, stopping: false });
+  await sleep(300);
+  assert.equal(calls, 0, "s2 encore ouverte");
+  assert.deepEqual(await (await endSession(app.port, { project: dir, session: "s2" })).json(), { ok: true, ended: true, stopping: true });
+  await within(stopped, 2000);
+  await assert.rejects(fetch(`${base}/api/health`));
+  await sleep(100);
+  assert.equal(calls, 1);
+});
+
+test("arrêt avec Claude Code : une session inscrite pendant le délai (/clear) annule l'arrêt", async (t) => {
+  const dir = await fixture();
+  let calls = 0;
+  const app = await startApp({ projectDir: dir, pluginDir: null, distDir: dir, port: 0, claudeConfigPath: join(dir, "absent.json"), sessions: ["s1"], sessionGraceMs: 150, onSessionsEnd: () => calls++ });
+  t.after(() => app.close());
+  const base = `http://127.0.0.1:${app.port}`;
+  assert.equal((await (await endSession(app.port, { project: dir, session: "s1" })).json()).stopping, true);
+  assert.equal((await fetch(`${base}/api/health?project=${encodeURIComponent(dir)}&session=s2`)).status, 200);
+  await sleep(400);
+  assert.equal(calls, 0);
+  assert.equal((await fetch(`${base}/api/health`)).status, 200);
+});
+
+test("fin de session : refusée à une page (Origin), sans JSON ou en GET ; sans effet pour une session inconnue ou un autre projet", async (t) => {
+  const dir = await fixture();
+  let calls = 0;
+  const app = await startApp({ projectDir: dir, pluginDir: null, distDir: dir, port: 0, claudeConfigPath: join(dir, "absent.json"), sessions: ["s1"], sessionGraceMs: 50, onSessionsEnd: () => calls++ });
+  t.after(() => app.close());
+  const base = `http://127.0.0.1:${app.port}`;
+  assert.equal((await endSession(app.port, { project: dir, session: "s1" }, { Origin: base })).status, 403);
+  assert.equal((await endSession(app.port, { project: dir, session: "s1" }, { Origin: "https://evil.example" })).status, 403);
+  assert.equal((await endSession(app.port, { project: dir, session: "s1" }, { "Content-Type": "text/plain" })).status, 403);
+  assert.equal((await fetch(`${base}/api/session-end`)).status, 405);
+  assert.equal(await rawGet(app.port, "/api/session-end", "evil.example"), 403);
+  // Session inscrite par un sondage d'un autre projet ou sans projet : ignorée.
+  await fetch(`${base}/api/health?project=${encodeURIComponent(`${dir}-autre`)}&session=s8`);
+  await fetch(`${base}/api/health?session=s9`);
+  const noEffect = { ok: true, ended: false, stopping: false };
+  for (const body of [{ project: dir, session: "inconnue" }, { project: dir, session: "s8" }, { project: dir, session: "s9" }, { project: `${dir}-autre`, session: "s1" }, { project: dir, session: "../s1" }]) {
+    assert.deepEqual(await (await endSession(app.port, body)).json(), noEffect, JSON.stringify(body));
+  }
+  await sleep(200);
+  assert.equal(calls, 0);
+  assert.equal((await fetch(`${base}/api/health`)).status, 200);
+});
+
+test("fin de session : une app sans session inscrite (lancée à la main) ne s'arrête pas", async (t) => {
+  const dir = await fixture();
+  let calls = 0;
+  const app = await startApp({ projectDir: dir, pluginDir: null, distDir: dir, port: 0, claudeConfigPath: join(dir, "absent.json"), sessionGraceMs: 50, onSessionsEnd: () => calls++ });
+  t.after(() => app.close());
+  assert.deepEqual(await (await endSession(app.port, { project: dir, session: "s1" })).json(), { ok: true, ended: false, stopping: false });
+  await sleep(200);
+  assert.equal(calls, 0);
+});

@@ -19,16 +19,16 @@ Deux écritures seulement depuis l'app : les variables des services dans `.env.l
 
 ## Lancer
 
-Rien à lancer à la main : quand Claude Code démarre dans un projet Ottho (ou un dossier vide), le plugin `ottho-code-app` démarre Ottho Builder 2 pour ce dossier et l'ouvre dans le navigateur ; une session suivante réutilise le Builder déjà lancé. Il s'arrête seul 30 minutes après la fermeture du dernier onglet. Depuis Claude Code, `/pipeline` (ou `/ottho-code-app:pipeline`) rouvre le navigateur, ou démarre le Builder s'il ne tourne pas.
+Rien à lancer à la main : quand Claude Code démarre dans un projet Ottho (ou un dossier vide), le plugin `ottho-code-app` démarre Ottho Builder 2 pour ce dossier et l'ouvre dans le navigateur ; une session suivante réutilise le Builder déjà lancé. Il s'arrête avec Claude Code, une dizaine de secondes après la fermeture de la dernière session ouverte sur ce dossier ; à défaut (Claude Code fermé de force), 30 minutes après la fermeture du dernier onglet. Depuis Claude Code, `/pipeline` (ou `/ottho-code-app:pipeline`) rouvre le navigateur, ou démarre le Builder s'il ne tourne pas.
 
 À la main (`<plugin>` : dossier du plugin, celui qui contient `builder/`) :
 
 ```bash
-node <plugin>/builder/bin/cli.mjs --project <dir>            # options : --plugin <dir> --port 4317 --no-open --idle-exit <min>
+node <plugin>/builder/bin/cli.mjs --project <dir>            # options : --plugin <dir> --port 4317 --no-open --idle-exit <min> --session <id>
 node <plugin>/builder/bin/cli.mjs --project <dir> --reopen   # rouvre le navigateur sur le Builder du projet, sans rien lancer
 ```
 
-`--idle-exit <min>` arrête le Builder quand aucun onglet n'est ouvert depuis ce nombre de minutes (le plugin passe 30). Sans `--plugin`, les agents affichés sont ceux du plugin qui contient le Builder (sinon ceux du plugin installé).
+`--idle-exit <min>` arrête le Builder quand aucun onglet n'est ouvert depuis ce nombre de minutes (le plugin passe 30). `--session <id>` : session Claude Code qui le lance (le plugin passe la sienne) ; les sessions suivantes s'inscrivent par `GET /api/health?project=…&session=…`, le hook `SessionEnd` les retire (`POST /api/session-end`, refusé à toute page web), et le Builder s'arrête 10 s après le retrait de la dernière, sauf si une autre s'inscrit entre-temps (`/clear`). Sans `--plugin`, les agents affichés sont ceux du plugin qui contient le Builder (sinon ceux du plugin installé).
 
 Le brief, écrit par Claude depuis le terminal (le hook de démarrage du plugin lui donne la commande exacte ; `--project <dir>` pour un autre dossier) :
 

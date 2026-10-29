@@ -3,7 +3,8 @@
 // ottho-code-app (dossier builder/) : son hook de démarrage le lance (ou à la main,
 // node <plugin>/builder/bin/cli.mjs --project <dossier>, Ctrl+C l'arrête). --reopen ne lance
 // rien : il retrouve l'instance du projet. --idle-exit l'arrête seul quand plus aucun onglet
-// n'est ouvert. Sans --plugin : le plugin qui contient ce Builder, sinon le plugin installé.
+// n'est ouvert. --session <id> : session Claude Code qui le lance ; il s'arrête quand la dernière
+// session inscrite se ferme. Sans --plugin : le plugin qui contient ce Builder, sinon le plugin installé.
 // La sous-commande `brief` écrit docs/brief.md depuis Claude Code (ou l'enregistre comme exemple), sans rien lancer.
 import { spawn } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
@@ -34,6 +35,7 @@ export function resolveOptions(argv, cwd) {
       "no-open": { type: "boolean" },
       reopen: { type: "boolean" },
       "idle-exit": { type: "string" },
+      session: { type: "string" },
     },
   });
   const port = values.port === undefined ? 4317 : Number(values.port);
@@ -47,6 +49,7 @@ export function resolveOptions(argv, cwd) {
     open: !values["no-open"],
     reopen: Boolean(values.reopen),
     idleExitMs: idle === null ? null : idle * 60_000,
+    sessions: values.session ? [values.session] : [],
   };
 }
 
@@ -77,7 +80,7 @@ export function openBrowser(url) {
     process.platform === "darwin" ? ["open", [url]]
     : process.platform === "win32" ? ["cmd", ["/c", "start", "", url]]
     : ["xdg-open", [url]];
-  const child = spawn(cmd, args, { detached: true, stdio: "ignore" });
+  const child = spawn(cmd, args, { detached: true, stdio: "ignore", windowsHide: true });
   child.on("error", () => {}); // pas de navigateur : l'URL est déjà affichée
   child.unref();
 }
@@ -198,6 +201,11 @@ export async function main(argv, { cwd = process.cwd(), log = console.log } = {}
           idleExitMs: opts.idleExitMs,
           onIdleExit: () => {
             log(`Ottho Builder 2 arrêté : aucun onglet ouvert depuis ${opts.idleExitMs / 60_000} min.`);
+            process.exit(0);
+          },
+          sessions: opts.sessions,
+          onSessionsEnd: () => {
+            log("Ottho Builder 2 arrêté : Claude Code fermé sur ce projet.");
             process.exit(0);
           },
         });

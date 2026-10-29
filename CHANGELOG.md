@@ -2,6 +2,18 @@
 
 Tous les changements notables de ce plugin sont documentés ici. Format basé sur [Keep a Changelog](https://keepachangelog.com/) et le plugin respecte le [SemVer](https://semver.org/).
 
+## [1.3.1] — 2026-10-29
+
+### Corrigé
+
+- **Windows : fenêtres de terminal qui s'ouvraient et se fermaient en boucle.** Ottho Builder 2 tourne détaché, sans console ; chaque `git` qu'il lançait pour relire le projet (6 par relecture, au moins une fois par minute) ouvrait une fenêtre. Tous les processus lancés par le Builder et les hooks (`git`, `npm` de l'aperçu, `taskkill`, ouverture du navigateur) passent désormais `windowsHide: true` ; un test le vérifie sur chaque appel.
+- **Relectures en chaîne** : `git status` réécrivait `.git/index`, que le Builder surveille, ce qui déclenchait une nouvelle relecture. Les commandes `git` du Builder passent `--no-optional-locks` (l'index n'est plus touché).
+- **Rien n'est relu quand aucun onglet n'est ouvert** : l'état est recalculé à l'ouverture d'un onglet.
+
+### Modifié
+
+- **Ottho Builder 2 s'arrête avec Claude Code.** Le hook `SessionStart` inscrit la session auprès du Builder du projet, un nouveau hook `SessionEnd` l'en retire ; le Builder s'arrête une dizaine de secondes après la fermeture de la dernière session ouverte sur le projet (un `/clear`, qui ferme puis rouvre une session, ne l'arrête pas). Filet conservé : arrêt 30 min après la fermeture du dernier onglet si Claude Code n'a pas pu prévenir le Builder (fenêtre fermée de force, plantage).
+
 ## [1.3.0] — 2026-10-29
 
 ### Modifié

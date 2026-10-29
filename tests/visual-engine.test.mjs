@@ -179,7 +179,8 @@ test("Builder absent, projet Ottho : la CLI est lancée détachée, journal dans
   assert.equal(out.systemMessage, `Ottho Builder 2 : ${url}`);
   assert.ok(out.hookSpecificOutput.additionalContext.includes(url));
   const { argv, cwd } = recorded(ctx);
-  assert.deepEqual(argv, ["--project", ctx.dir, "--plugin", PLUGIN, "--idle-exit", "30"]);
+  // Session du message (session_id) transmise : le Builder s'arrêtera avec elle.
+  assert.deepEqual(argv, ["--project", ctx.dir, "--plugin", PLUGIN, "--idle-exit", "30", "--session", "s1"]);
   assert.equal(cwd, realpathSync(ctx.dir));
   assert.match(readFileSync(join(ctx.dir, ".claude", "ottho-builder.log"), "utf8"), /faux Builder/);
   assert.ok(!existsSync(lockOf(ctx)), "verrou retiré une fois le Builder prêt");
@@ -217,7 +218,7 @@ test("sans OTTHO_PIPELINE_CLI ni CLAUDE_PLUGIN_ROOT : le Builder inclus dans le 
   let builder;
   t.after(() => builder?.close());
   const spawnFn = (command, args, options) => {
-    spawned.push({ command, args, cwd: options.cwd, detached: options.detached });
+    spawned.push({ command, args, cwd: options.cwd, detached: options.detached, windowsHide: options.windowsHide });
     const child = new EventEmitter();
     child.unref = () => {};
     fakeBuilder(ctx.dir, ctx.port).then((b) => (builder = b));
@@ -226,7 +227,7 @@ test("sans OTTHO_PIPELINE_CLI ni CLAUDE_PLUGIN_ROOT : le Builder inclus dans le 
   const out = JSON.parse(await main({ stdin: sessionStart(ctx.dir, "compact"), env, ports: [ctx.port], spawnFn }));
   assert.equal(out.systemMessage, `Ottho Builder 2 : http://127.0.0.1:${ctx.port}`);
   assert.deepEqual(spawned, [
-    { command: process.execPath, args: [BUILDER_CLI, "--project", ctx.dir, "--plugin", PLUGIN, "--idle-exit", "30", "--no-open"], cwd: ctx.dir, detached: true },
+    { command: process.execPath, args: [BUILDER_CLI, "--project", ctx.dir, "--plugin", PLUGIN, "--idle-exit", "30", "--no-open", "--session", "s1"], cwd: ctx.dir, detached: true, windowsHide: true },
   ]);
   // Lancé par le node du hook ; la commande du brief donnée à Claude passe par le node du PATH.
   assert.ok(out.hookSpecificOutput.additionalContext.includes(`node '${BUILDER_CLI}' brief --project '${ctx.dir}'`));
@@ -527,4 +528,65 @@ test("parsePorts : plages et listes ; illisible → null", () => {
   assert.equal(parsePorts("abc"), null);
   assert.equal(parsePorts("10-5"), null);
   assert.equal(parsePorts("1-70000"), null);
+});
+
+// Faux Builder qui note chaque requête reçue (méthode, adresse, Origin, type et corps).
+async function recordingBuilder(project) {
+  const requests = [];
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      requests.push({ method: req.method, url: req.url, origin: req.headers.origin, type: req.headers["content-type"], body });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true, app: "ottho-pipeline", project }));
+    });
+  });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const { port } = server.address();
+  assertTestPort(port);
+  return {
+    port,
+    requests,
+    close: () => {
+      server.closeAllConnections();
+      return new Promise((r) => server.close(r));
+    },
+  };
+}
+
+test("session Claude Code : inscrite auprès du Builder au démarrage, retirée par --end (SessionEnd) ; rien de lancé ni affiché", async (t) => {
+  const ctx = await setup(t, { files: { "docs/brief.md": "# Brief" } });
+  const builder = await recordingBuilder(ctx.dir);
+  t.after(builder.close);
+  await main({ stdin: sessionStart(ctx.dir), env: ctx.env, ports: [builder.port] });
+  const sessions = builder.requests.map((r) => new URL(r.url, "http://local").searchParams.get("session"));
+  assert.deepEqual(sessions, ["s1"]);
+
+  // Comme Claude Code : le script lancé avec --end, le message SessionEnd sur stdin.
+  const end = JSON.stringify({ session_id: "s1", hook_event_name: "SessionEnd", reason: "prompt_input_exit", cwd: ctx.dir });
+  const res = await runScript(["--end", "--ports", String(builder.port)], { input: end, env: ctx.env, cwd: ctx.root });
+  assert.deepEqual([res.code, res.stdout, res.stderr], [0, "", ""]);
+  const posts = builder.requests.filter((r) => r.method === "POST");
+  assert.deepEqual(
+    posts.map((r) => [r.url, r.type, r.origin, JSON.parse(r.body)]),
+    [["/api/session-end", "application/json", undefined, { project: ctx.dir, session: "s1" }]],
+  );
+  // Health de --end : sans session (rien n'est réinscrit).
+  assert.ok(builder.requests.filter((r) => r.method === "GET").slice(1).every((r) => !r.url.includes("session=")));
+
+  // Sans identifiant de session : rien n'est envoyé.
+  const anonymous = JSON.stringify({ hook_event_name: "SessionEnd", cwd: ctx.dir });
+  assert.equal(await main({ argv: ["--end"], stdin: anonymous, env: ctx.env, ports: [builder.port] }), "");
+  assert.equal(builder.requests.filter((r) => r.method === "POST").length, 1);
+  assert.ok(!existsSync(ctx.record));
+  assert.ok(!existsSync(join(ctx.dir, ".claude")));
+});
+
+test("--end sans Builder pour le projet : rien n'est lancé, créé ni affiché", async (t) => {
+  const ctx = await setup(t, { files: { "docs/PRD.md": "# PRD" } });
+  const end = JSON.stringify({ session_id: "s1", hook_event_name: "SessionEnd", reason: "other", cwd: ctx.dir });
+  assert.equal(await main({ argv: ["--end"], stdin: end, env: ctx.env, ports: [ctx.port] }), "");
+  assert.ok(!existsSync(ctx.record));
+  assert.ok(!existsSync(join(ctx.dir, ".claude")));
 });

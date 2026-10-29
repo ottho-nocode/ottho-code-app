@@ -1,6 +1,6 @@
 {
   "name": "ottho-code-app",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Méthode agence pour livrer des apps web modernes avec Claude Code : SDD à 2 niveaux, 10 agents spécialisés (dont security-auditor), audit sécurité complet via /audit-securite, 9 MCP recommandés (non installés par défaut), hooks de sécurité Git, pipeline visuel des agents (Ottho Builder 2) inclus dans le plugin et ouvert via /pipeline, rien à installer.",
   "author": {
     "name": "Ottho",

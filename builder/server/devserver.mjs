@@ -153,7 +153,7 @@ export function frameProxy(targetPort) {
 
 function killTree(child) {
   if (process.platform === "win32") {
-    nodeSpawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+    nodeSpawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
     return;
   }
   try {
@@ -213,6 +213,8 @@ export function createDevServer({ projectDir, spawn = nodeSpawn, onChange = () =
       detached: !windows,
       shell: windows,
       stdio: ["ignore", "pipe", "pipe"],
+      // Builder sans console sous Windows : sinon npm ouvrirait sa propre fenêtre.
+      windowsHide: true,
     });
     child = current;
     set({ status: "starting", url: null, frameUrl: null, error: null });

@@ -11,12 +11,16 @@
 //   plugin chargé deux fois) ne lancent qu'un Builder, l'autre attend qu'il réponde.
 //   Verrou ancien (plus de 15 s) repris par un seul hook à la fois (.claude/ottho-builder.lock.break).
 //   source compact ou clear : lancé avec --no-open (pas de navigateur en pleine session).
+//   Session Claude Code (session_id du message) inscrite auprès du Builder (?session= du health,
+//   --session au lancement) : il s'arrête quand la dernière session inscrite se ferme.
 //   Builder : inclus dans le plugin, <plugin>/builder/bin/cli.mjs, lancé par le node qui exécute
 //   ce hook (plugin : CLAUDE_PLUGIN_ROOT, sinon le dossier parent de scripts/). OTTHO_PIPELINE_CLI
 //   le remplace (tests).
 //   Sortie : systemMessage (adresse, pour l'utilisateur), additionalContext (pour Claude).
 // --open (commande /pipeline) : sans la garde du dossier, ouvre le navigateur si le Builder
 // tournait déjà (un Builder qui démarre l'ouvre lui-même), sortie en une ligne de texte.
+// --end (hook SessionEnd) : retire la session du Builder du projet (POST /api/session-end), rien
+// n'est lancé ni écrit, aucune sortie.
 // --project <dossier> remplace le dossier de la session ; --ports a-b : autres ports (tests).
 // Jamais bloquant : toute erreur → sortie 0, rien sur stderr.
 import { spawn } from "node:child_process";
@@ -97,12 +101,17 @@ export function engineOf(env, pluginRoot = pluginRootOf(env)) {
   return isFile(cli) ? { node: process.execPath, cli: resolve(cli) } : null;
 }
 
-// Adresse du Builder de ce projet (premier port qui répond pour lui), ou null.
-export async function findBuilder(dir, ports) {
+// Identifiant de session Claude Code (un UUID), ou null.
+const sessionOf = (payload) => (typeof payload.session_id === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(payload.session_id) ? payload.session_id : null);
+
+// Adresse du Builder de ce projet (premier port qui répond pour lui), ou null. session : inscrite
+// auprès du Builder qui répond pour ce projet.
+export async function findBuilder(dir, ports, session = null) {
+  const query = `project=${encodeURIComponent(dir)}${session ? `&session=${encodeURIComponent(session)}` : ""}`;
   const found = await Promise.all(
     ports.map(async (port) => {
       try {
-        const res = await fetch(`http://127.0.0.1:${port}/api/health?project=${encodeURIComponent(dir)}`, { signal: AbortSignal.timeout(PROBE_MS) });
+        const res = await fetch(`http://127.0.0.1:${port}/api/health?${query}`, { signal: AbortSignal.timeout(PROBE_MS) });
         const body = await res.json();
         return body?.app === "ottho-pipeline" && body.project === dir ? port : null;
       } catch {
@@ -248,10 +257,10 @@ function takeLock(lock) {
 }
 
 // Builder détaché (il survit à la session), sorties dans .claude/ottho-builder.log.
-function launch({ engine, dir, pluginRoot, env, spawnFn, noOpen }) {
+function launch({ engine, dir, pluginRoot, env, spawnFn, noOpen, session }) {
   const fd = openLog(join(claudeDir(dir), "ottho-builder.log"));
   try {
-    const args = [engine.cli, "--project", dir, "--plugin", pluginRoot, "--idle-exit", "30", ...(noOpen ? ["--no-open"] : [])];
+    const args = [engine.cli, "--project", dir, "--plugin", pluginRoot, "--idle-exit", "30", ...(noOpen ? ["--no-open"] : []), ...(session ? ["--session", session] : [])];
     const child = spawnFn(engine.node, args, {
       cwd: dir,
       env,
@@ -270,14 +279,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Attend que le Builder réponde pour ce projet ; abandonne s'il s'arrête (exited) ou au bout de ms.
 // child null : lancé par un autre hook, seul le délai compte.
-async function waitBuilder(dir, ports, child, ms) {
+async function waitBuilder(dir, ports, child, ms, session) {
   let exited = false;
   child?.on?.("exit", () => (exited = true));
   child?.on?.("error", () => (exited = true));
   const deadline = Date.now() + ms;
   for (;;) {
     const last = exited;
-    const url = await findBuilder(dir, ports);
+    const url = await findBuilder(dir, ports, session);
     if (url || last || Date.now() >= deadline) return { url, exited };
     await sleep(POLL_MS);
   }
@@ -329,11 +338,29 @@ const payloadOf = (stdin) => {
   }
 };
 
+// Session fermée (hook SessionEnd) : retirée du Builder de ce projet, qui s'arrête si c'était la
+// dernière inscrite.
+async function endSession(dir, ports, session) {
+  const url = await findBuilder(dir, ports);
+  if (!url) return;
+  try {
+    await fetch(`${url}/api/session-end`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project: dir, session }),
+      signal: AbortSignal.timeout(PROBE_MS),
+    });
+  } catch {
+    // Builder arrêté entre-temps
+  }
+}
+
 // Texte à écrire sur stdout ("" : rien). Dépendances injectables pour les tests.
 export async function main({ argv = [], stdin = "", env = process.env, cwd = process.cwd(), ports = PORTS, spawnFn = spawn, open = openBrowser, waitMs = WAIT_MS } = {}) {
-  const { values } = parseArgs({ args: argv, strict: false, allowPositionals: true, options: { open: { type: "boolean" }, project: { type: "string" }, ports: { type: "string" } } });
+  const { values } = parseArgs({ args: argv, strict: false, allowPositionals: true, options: { open: { type: "boolean" }, end: { type: "boolean" }, project: { type: "string" }, ports: { type: "string" } } });
   const force = values.open === true;
   const payload = force ? {} : payloadOf(stdin);
+  const session = sessionOf(payload);
   const given = typeof values.project === "string" && values.project ? values.project : env.CLAUDE_PROJECT_DIR || (typeof payload.cwd === "string" && payload.cwd) || cwd;
   // Même forme que le --project du Builder : chemin absolu, sans « / » final, liens non résolus.
   const dir = resolve(cwd, given);
@@ -355,8 +382,13 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
   }
   if (!isDir) return force ? `Ottho Builder 2 : dossier de projet introuvable : ${dir}\n` : "";
 
+  if (values.end === true && !force) {
+    if (session) await endSession(dir, probed, session);
+    return "";
+  }
+
   const engine = engineOf(env, pluginRoot);
-  let url = await findBuilder(dir, probed);
+  let url = await findBuilder(dir, probed, session);
   if (url) {
     if (force) {
       try {
@@ -374,12 +406,12 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
     try {
       lock = join(claudeDir(dir), "ottho-builder.lock");
       mine = takeLock(lock);
-      if (mine) child = launch({ engine, dir, pluginRoot, env, spawnFn, noOpen });
+      if (mine) child = launch({ engine, dir, pluginRoot, env, spawnFn, noOpen, session });
     } catch (err) {
       if (mine) removeQuietly(lock);
       return say(err instanceof UnsafePathError ? UNSAFE : NOT_STARTED);
     }
-    const waited = await waitBuilder(dir, probed, child, waitMs);
+    const waited = await waitBuilder(dir, probed, child, waitMs, session);
     // Builder qui démarre encore : verrou gardé (expire au bout de 15 s), pas de second lancement.
     if (mine && (waited.url || waited.exited)) removeQuietly(lock);
     url = waited.url;

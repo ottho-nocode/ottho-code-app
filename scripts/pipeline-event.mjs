@@ -327,7 +327,7 @@ function readTail(path, max = 2 * 1024 * 1024) {
 
 function currentBranch(cwd) {
   try {
-    const out = execFileSync("git", ["branch", "--show-current"], { cwd, stdio: ["ignore", "pipe", "ignore"], timeout: 2000 });
+    const out = execFileSync("git", ["branch", "--show-current"], { cwd, stdio: ["ignore", "pipe", "ignore"], timeout: 2000, windowsHide: true });
     return out.toString().trim() || null;
   } catch {
     return null;
