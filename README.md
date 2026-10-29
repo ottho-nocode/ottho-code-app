@@ -72,7 +72,7 @@ Créera la branche `feature/US-XX-page-de-connexion`, puis enchaînera `spec-wri
 /validate-feature
 ```
 
-Lance `code-reviewer` (audit) puis `tester` (tests + coverage).
+Lance `code-reviewer` (audit) puis `tester` (tests + coverage, parcours E2E filmés et analysés, rapport `/reviews/test-report-US-XX.md`).
 
 ### Shipper une feature
 
@@ -179,7 +179,7 @@ brainstorming → spec-writer → designer → architect → devops
 | `architect` | opus | Plan | Stack, BDD, API, ADR |
 | `developer` | sonnet | Implement | Code sur branche feature |
 | `code-reviewer` | opus | Validate | Audit qualité/sécu/perf (lecture seule) |
-| `tester` | sonnet | Validate | Tests unit + intégration + E2E |
+| `tester` | sonnet | Validate | Tests unit + intégration + E2E filmés, analyse des captures et vidéos, rapport de recette |
 | `devops` | sonnet | Bootstrap + après-coup | CI/CD, infra, monitoring |
 | `doc-writer` | sonnet | Post-Validate | README, doc API, guides |
 | `security-auditor` | opus | Avant mise en ligne | Audit sécu transverse : secrets, RLS, code mort (lecture seule) |
@@ -218,6 +218,8 @@ Un sous-agent ne voit que les outils de sa ligne `tools:`. Chaque agent reçoit 
 - **Garde les noms du tableau** (`supabase`, `stripe`…) : les outils d'un serveur portent son nom (`mcp__supabase__list_tables`), et les agents les cherchent sous ce nom. Un serveur renommé (`supabase-dev`) est invisible pour eux.
 - **Connecteurs claude.ai** : Supabase, Stripe, Vercel, Notion et Figma branchés depuis claude.ai (outils `mcp__claude_ai_Supabase__…`) sont aussi reconnus par les agents, avec les mêmes interdictions.
 - Si un agent a besoin d'un service absent, il ne le contourne pas (pas de `curl` avec une clé) : il te le demande dans ses « Questions pour l'utilisateur ».
+
+**Pour l'agent `tester` (facultatif)** : le MCP Playwright lui donne un navigateur en direct pour explorer un écran ou comprendre un échec (`claude mcp add playwright -- npx @playwright/mcp@latest`). Les vidéos et captures de recette, elles, viennent de `npx playwright test` et ne demandent aucun MCP. Pour analyser les vidéos, `tester` a besoin de `ffmpeg` sur la machine (`brew install ffmpeg`).
 
 Serveurs OAuth + Context7 (aucune clé dans le fichier) :
 
