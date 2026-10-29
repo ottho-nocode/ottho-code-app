@@ -70,7 +70,7 @@ Créera la branche `feature/US-XX-page-de-connexion`, puis enchaînera `spec-wri
 /validate-feature
 ```
 
-Lance `code-reviewer` (audit) puis `tester` (tests + coverage).
+Lance `code-reviewer` (audit) puis `tester` (tests + coverage, parcours E2E filmés et analysés, rapport `/reviews/test-report-US-XX.md`).
 
 ### Shipper une feature
 
@@ -126,7 +126,7 @@ brainstorming → spec-writer → architect → devops
 | `architect` | opus | Plan | Stack, BDD, API, ADR |
 | `developer` | sonnet | Implement | Code sur branche feature |
 | `code-reviewer` | opus | Validate | Audit qualité/sécu/perf (lecture seule) |
-| `tester` | sonnet | Validate | Tests unit + intégration + E2E |
+| `tester` | sonnet | Validate | Tests unit + intégration + E2E filmés, analyse des captures et vidéos, rapport de recette |
 | `devops` | sonnet | Bootstrap + après-coup | CI/CD, infra, monitoring |
 | `doc-writer` | sonnet | Post-Validate | README, doc API, guides |
 | `security-auditor` | opus | Avant mise en ligne | Audit sécu transverse : secrets, RLS, code mort (lecture seule) |
@@ -150,6 +150,8 @@ brainstorming → spec-writer → architect → devops
 | `notion` | Page projet source de vérité | OAuth : `/mcp` puis authentifier |
 | `figma` | Maquettes, design tokens | OAuth : `/mcp` puis authentifier |
 | `context7` | Doc technique à jour | aucune |
+
+**Pour l'agent `tester` (facultatif)** : le MCP Playwright lui donne un navigateur en direct pour explorer un écran ou comprendre un échec (`claude mcp add playwright -- npx @playwright/mcp@latest`). Les vidéos et captures de recette, elles, viennent de `npx playwright test` et ne demandent aucun MCP. Pour analyser les vidéos, `tester` a besoin de `ffmpeg` sur la machine (`brew install ffmpeg`).
 
 Serveurs OAuth + Context7 (aucune clé dans le fichier) :
 

@@ -2,6 +2,16 @@
 
 Tous les changements notables de ce plugin sont documentés ici. Format basé sur [Keep a Changelog](https://keepachangelog.com/) et le plugin respecte le [SemVer](https://semver.org/).
 
+## [1.2.0] — 2026-10-29
+
+### Modifié
+
+- **Agent `tester` v2 : recette filmée et analysée.** Ajout de `mcp__playwright__*` dans `tools` (navigateur en direct, facultatif). Pour chaque critère Given-When-Then joué dans un navigateur, il écrit un test Playwright, active `video: 'on', screenshot: 'on', trace: 'on'` dans `playwright.config.ts`, puis **regarde lui-même les preuves** : il ouvre chaque capture, découpe chaque vidéo en images avec `ffmpeg` (`fps=2`) et cherche ce qu'aucune assertion ne teste (texte coupé, élément qui déborde, montant mal formaté, erreur affichée). Nouveau verdict `PASS ⚠` (assertions vertes, anomalie visible). Il rend un rapport de recette `/reviews/test-report-US-XX.md` (verdict, preuves et observation par critère, sections Échecs et Points visuels à vérifier). Vidéos, captures et traces restent hors de Git.
+- **`/validate-feature`** : enchaîne les tests E2E filmés, l'analyse visuelle et le rapport de recette ; s'arrête sur les `PASS ⚠` pour demander « corriger ou accepter ».
+- **README** : rôle de `tester` mis à jour, MCP Playwright et `ffmpeg` documentés comme facultatifs pour `tester`.
+
+Support du cours academy **« Tester ton app »** (Claude for Builders). Avant cette version, l'élève devait modifier lui-même le fichier de l'agent, et `claude plugin update` écrasait sa modification.
+
 ## [1.1.0] — 2026-07-21
 
 ### Ajouté
