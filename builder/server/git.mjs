@@ -1,12 +1,15 @@
 // Instantané Git utile au calcul des statuts. null si le dossier n'est pas un repo.
 // execFile (pas de shell) : aucun argument n'est interprété.
+// --no-optional-locks : git status ne réécrit pas .git/index, que surveille la signature (sinon
+// chaque lecture déclencherait la suivante). windowsHide : le Builder tourne sans console sous
+// Windows, chaque git y ouvrirait une fenêtre.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
 
 async function git(cwd, args) {
-  const { stdout } = await run("git", args, { cwd, maxBuffer: 8 * 1024 * 1024 });
+  const { stdout } = await run("git", ["--no-optional-locks", ...args], { cwd, maxBuffer: 8 * 1024 * 1024, windowsHide: true });
   return stdout.trim();
 }
 

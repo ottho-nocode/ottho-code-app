@@ -3,6 +3,9 @@
 // projet ; réponses, brief, validations et fichiers de marque passent par le CLI. Seules
 // écritures : .env.local (POST /api/config) et le lancement ou l'arrêt de l'aperçu
 // (POST /api/preview/start, /api/preview/stop). Protégées par Origin + jeton de lancement.
+// Les hooks du plugin inscrivent leur session Claude Code (GET /api/health?session=) et la
+// retirent à sa fermeture (POST /api/session-end, refusé à toute page) : l'app s'arrête avec la
+// dernière.
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -111,6 +114,9 @@ export async function buildState({ projectDir, pluginDir, claudeConfigPath }) {
 }
 
 const SMALL_BODY = 16 * 1024;
+// Identifiant de session Claude Code (un UUID) transmis par les hooks.
+const SESSION_RE = /^[A-Za-z0-9_-]{1,128}$/;
+const isSession = (s) => typeof s === "string" && SESSION_RE.test(s);
 
 function sendJson(res, status, body) {
   res.writeHead(status, { "Content-Type": "application/json" });
@@ -167,6 +173,12 @@ export function startApp({
   idleExitMs = null,
   idleCheckMs = 30_000,
   onIdleExit = () => {},
+  // Arrêt avec Claude Code : sessions ouvertes sur ce projet (sessions : celle qui a lancé l'app).
+  // Quand la dernière se ferme, arrêt après sessionGraceMs, sauf si une autre s'inscrit entre-temps
+  // (un /clear ferme la session puis en ouvre une nouvelle aussitôt).
+  sessions: initialSessions = [],
+  sessionGraceMs = 10_000,
+  onSessionsEnd = () => {},
 }) {
   const clients = new Set();
   // Onglets branchés ou en cours de branchement (état en calcul) ; dernier instant où il
@@ -174,6 +186,10 @@ export function startApp({
   let connecting = 0;
   const active = () => clients.size + connecting > 0;
   let lastActive = Date.now();
+  const sessions = new Set(initialSessions.filter(isSession));
+  let sessionsEnd = null;
+  // Arrêt du serveur, défini une fois qu'il écoute.
+  let stop = () => {};
   // Aperçu de l'app du projet : lancé seulement quand l'élève clique « Lancer l'aperçu ».
   const preview = createDevServer({
     projectDir,
@@ -261,6 +277,46 @@ export function startApp({
     sendJson(res, 200, { ok: true, ...(result ?? {}) });
   }
 
+  const addSession = (session) => {
+    if (!isSession(session)) return;
+    sessions.add(session);
+    clearTimeout(sessionsEnd);
+    sessionsEnd = null;
+  };
+
+  // Fermeture d'une session Claude Code (hook SessionEnd). Jamais une page : un navigateur envoie
+  // toujours l'en-tête Origin avec un POST. Seule une session inscrite compte, et son identifiant
+  // n'est connu que des hooks : un site tiers ne peut pas arrêter l'app.
+  async function handleSessionEnd(req, res) {
+    if (req.headers.origin !== undefined || !(req.headers["content-type"] ?? "").startsWith("application/json")) {
+      sendJson(res, 403, { error: "Requête refusée." });
+      return;
+    }
+    let body;
+    try {
+      body = await readJson(req, SMALL_BODY);
+    } catch (err) {
+      if (!(err instanceof HttpError)) throw err;
+      sendJson(res, err.status, { error: err.message });
+      return;
+    }
+    const ended = body?.project === projectDir && isSession(body.session) && sessions.delete(body.session);
+    if (ended && sessions.size === 0) {
+      clearTimeout(sessionsEnd);
+      sessionsEnd = setTimeout(() => {
+        sessionsEnd = null;
+        if (sessions.size) return;
+        // Même si la fermeture échoue, le processus ne reste pas en vie sans serveur.
+        try {
+          stop();
+        } finally {
+          onSessionsEnd();
+        }
+      }, sessionGraceMs);
+    }
+    sendJson(res, 200, { ok: true, ended, stopping: sessionsEnd !== null });
+  }
+
   const server = createServer(async (req, res) => {
     try {
       const actual = server.address().port;
@@ -269,6 +325,11 @@ export function startApp({
         return;
       }
       const path = (req.url ?? "/").split("?")[0];
+      if (path === "/api/session-end") {
+        if (req.method === "POST") await handleSessionEnd(req, res);
+        else res.writeHead(405).end();
+        return;
+      }
       if (req.method === "POST" && WRITES[path]) {
         await handleWrite(req, res, actual, WRITES[path]);
         return;
@@ -280,8 +341,13 @@ export function startApp({
       }
       if (path === "/api/health") {
         // Hook du plugin qui cherche le Builder de son projet : l'adresse qu'il annonce reste
-        // valable (un simple sondage des ports, sans le projet, ne retient pas l'app).
-        if (new URL(req.url ?? "/", "http://local").searchParams.get("project") === projectDir) lastActive = Date.now();
+        // valable (un simple sondage des ports, sans le projet, ne retient pas l'app). Avec
+        // session : la session Claude Code est inscrite (l'app s'arrêtera avec elle).
+        const params = new URL(req.url ?? "/", "http://local").searchParams;
+        if (params.get("project") === projectDir) {
+          lastActive = Date.now();
+          addSession(params.get("session"));
+        }
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: true, app: "ottho-pipeline", project: projectDir }));
         return;
@@ -398,6 +464,9 @@ export function startApp({
     server.once("error", ko);
     server.listen(port, host, () => {
       const poll = setInterval(async () => {
+        // Aucun onglet : rien à diffuser, rien n'est relu (git compris). Un onglet qui se
+        // branche, et /api/state, recalculent l'état eux-mêmes.
+        if (!clients.size) return;
         try {
           if (await refresh()) broadcast();
         } catch {
@@ -424,11 +493,13 @@ export function startApp({
         clearInterval(poll);
         clearInterval(ping);
         clearInterval(idle);
+        clearTimeout(sessionsEnd);
         preview.stop();
         for (const c of clients) c.end();
         server.closeAllConnections();
         server.close();
       };
+      stop = close;
       ok({ server, port: server.address().port, close });
     });
   });

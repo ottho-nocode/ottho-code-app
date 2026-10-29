@@ -86,7 +86,7 @@ export async function configStatus(projectDir) {
 
 async function ignored(projectDir) {
   try {
-    await run("git", ["check-ignore", "-q", ENV_FILE], { cwd: projectDir });
+    await run("git", ["check-ignore", "-q", ENV_FILE], { cwd: projectDir, windowsHide: true });
     return true;
   } catch (err) {
     if (err.code === 1) return false; // repo Git, fichier non ignoré

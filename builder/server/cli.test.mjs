@@ -13,13 +13,13 @@ process.env.OTTHO_PIPELINE_HOME = await tempDir("op-home-");
 const CLI_COMMAND = `node ${JSON.stringify(fileURLToPath(new URL("../bin/cli.mjs", import.meta.url)))}`;
 
 test("resolveOptions : valeurs par défaut", () => {
-  assert.deepEqual(resolveOptions([], "/p"), { projectDir: "/p", pluginDir: undefined, port: 4317, open: true, reopen: false, idleExitMs: null });
+  assert.deepEqual(resolveOptions([], "/p"), { projectDir: "/p", pluginDir: undefined, port: 4317, open: true, reopen: false, idleExitMs: null, sessions: [] });
 });
 
 test("resolveOptions : toutes les options", () => {
   assert.deepEqual(
-    resolveOptions(["--project", "app", "--plugin", "/pl", "--port", "5000", "--no-open", "--reopen", "--idle-exit", "30"], "/p"),
-    { projectDir: "/p/app", pluginDir: "/pl", port: 5000, open: false, reopen: true, idleExitMs: 1_800_000 },
+    resolveOptions(["--project", "app", "--plugin", "/pl", "--port", "5000", "--no-open", "--reopen", "--idle-exit", "30", "--session", "abc-123"], "/p"),
+    { projectDir: "/p/app", pluginDir: "/pl", port: 5000, open: false, reopen: true, idleExitMs: 1_800_000, sessions: ["abc-123"] },
   );
 });
 

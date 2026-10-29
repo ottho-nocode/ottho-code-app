@@ -4,7 +4,7 @@ description: Rouvre Ottho Builder 2, la vue du pipeline des agents, dans le navi
 
 # /pipeline
 
-Ottho Builder 2 est une app locale, en lecture seule : carte des agents, agent actif en direct, avancement de chaque `US-XX`, questions en attente, livrables à valider, éléments de marque. Elle s'ouvre d'elle-même au démarrage de Claude Code dans un projet Ottho (hook `SessionStart` du plugin) et s'arrête seule 30 min après la fermeture de son dernier onglet ; la session suivante la relance.
+Ottho Builder 2 est une app locale, en lecture seule : carte des agents, agent actif en direct, avancement de chaque `US-XX`, questions en attente, livrables à valider, éléments de marque. Elle s'ouvre d'elle-même au démarrage de Claude Code dans un projet Ottho (hook `SessionStart` du plugin) et s'arrête avec Claude Code (une dizaine de secondes après la fermeture de la dernière session sur ce projet, ou 30 min après la fermeture de son dernier onglet si Claude Code n'a pas pu la prévenir) ; la session suivante la relance.
 
 ## Séquence
 
@@ -20,7 +20,7 @@ Ottho Builder 2 est une app locale, en lecture seule : carte des agents, agent a
    node "${CLAUDE_PLUGIN_ROOT}/scripts/visual-engine.mjs" --open --project "${CLAUDE_PROJECT_DIR:-$PWD}"
    ```
 
-   Elle retrouve le Builder du projet, ou le démarre en processus détaché (il survit à la session), puis ouvre le navigateur.
+   Elle retrouve le Builder du projet, ou le démarre en processus détaché, puis ouvre le navigateur.
 
 2. Redonne à l'utilisateur la ligne affichée :
    - `Ottho Builder 2 : http://127.0.0.1:<port>` : l'adresse de la vue, déjà ouverte dans le navigateur ;
