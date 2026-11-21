@@ -30,7 +30,7 @@ node <plugin>/builder/bin/cli.mjs --project <dir> --reopen   # rouvre le navigat
 
 `--idle-exit <min>` arrête le Builder quand aucun onglet n'est ouvert depuis ce nombre de minutes (le plugin passe 30). `--session <id>` : session Claude Code qui le lance (le plugin passe la sienne) ; les sessions suivantes s'inscrivent par `GET /api/health?project=…&session=…`, le hook `SessionEnd` les retire (`POST /api/session-end`, refusé à toute page web), et le Builder s'arrête 10 s après le retrait de la dernière, sauf si une autre s'inscrit entre-temps (`/clear`). Sans `--plugin`, les agents affichés sont ceux du plugin qui contient le Builder (sinon ceux du plugin installé).
 
-Le brief, écrit par Claude depuis le terminal (le hook de démarrage du plugin lui donne la commande exacte ; `--project <dir>` pour un autre dossier) :
+Le brief, écrit par Claude depuis le terminal (`--project <dir>` pour un autre dossier) :
 
 ```bash
 node <plugin>/builder/bin/cli.mjs brief --list               # exemples enregistrés dans ~/.ottho-pipeline/briefs

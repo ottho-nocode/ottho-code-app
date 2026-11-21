@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-// Hook SessionStart du plugin ottho-code-app : Ottho Builder 2 (vue du pipeline des agents, en
-// lecture seule) accompagne chaque session Claude Code.
+// Ottho Builder 2 (vue du pipeline des agents, en lecture seule) du plugin ottho-code-app. Le
+// plugin ne l'ouvre plus au démarrage d'une session : il s'ouvre à la demande, par la commande
+// /pipeline (--open ci-dessous). Le mode hook (message JSON sur stdin, sans --open) reste pris en
+// charge mais n'est plus branché dans hooks.json ; seul --end l'est, par le hook SessionEnd.
 //   Cherche le Builder du projet (/api/health sur 4317 à 4326, champ project ; l'appel avec
 //   ?project= le garde en vie). Sinon, dans un projet Ottho ou un dossier encore vide (jamais le
 //   dossier personnel), le démarre détaché : node <cli> --project <dossier> --plugin <plugin>
