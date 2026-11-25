@@ -1,6 +1,6 @@
 // Point d'entrée : options, réutilisation d'une instance existante, choix du
 // port (4317 puis les 9 suivants), ouverture du navigateur. Le Builder fait partie du plugin
-// ottho-code-app (dossier builder/) : son hook de démarrage le lance (ou à la main,
+// ottho-code-app (dossier builder/) : sa commande /pipeline le lance (ou à la main,
 // node <plugin>/builder/bin/cli.mjs --project <dossier>, Ctrl+C l'arrête). --reopen ne lance
 // rien : il retrouve l'instance du projet. --idle-exit l'arrête seul quand plus aucun onglet
 // n'est ouvert. --session <id> : session Claude Code qui le lance ; il s'arrête quand la dernière

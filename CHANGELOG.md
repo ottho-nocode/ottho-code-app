@@ -2,6 +2,13 @@
 
 Tous les changements notables de ce plugin sont documentés ici. Format basé sur [Keep a Changelog](https://keepachangelog.com/) et le plugin respecte le [SemVer](https://semver.org/).
 
+## [1.4.0] — 2026-11-21
+
+### Modifié
+
+- **Ottho Builder 2 ne s'ouvre plus tout seul.** Le hook `SessionStart` qui le démarrait et ouvrait le navigateur à chaque session Claude Code est retiré de `hooks.json` : la commande `/pipeline` est désormais son seul lanceur (`scripts/visual-engine.mjs --open`, qui le retrouve ou le démarre détaché, puis ouvre le navigateur). Le script garde son mode hook, simplement plus branché au démarrage.
+- **Arrêt du Builder** : plus de session inscrite au démarrage, donc plus d'arrêt « avec Claude Code ». Il s'arrête 30 min après la fermeture de son dernier onglet (`--idle-exit 30`, panneau Équipe compris). Le hook `SessionEnd` reste en place pour un Builder lancé avec `--session`.
+
 ## [1.3.1] — 2026-10-29
 
 ### Corrigé

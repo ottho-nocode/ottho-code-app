@@ -4,17 +4,11 @@ description: Rouvre Ottho Builder 2, la vue du pipeline des agents, dans le navi
 
 # /pipeline
 
-Ottho Builder 2 est une app locale, en lecture seule : carte des agents, agent actif en direct, avancement de chaque `US-XX`, questions en attente, livrables à valider, éléments de marque. Elle s'ouvre d'elle-même au démarrage de Claude Code dans un projet Ottho (hook `SessionStart` du plugin) et s'arrête avec Claude Code (une dizaine de secondes après la fermeture de la dernière session sur ce projet, ou 30 min après la fermeture de son dernier onglet si Claude Code n'a pas pu la prévenir) ; la session suivante la relance.
+Ottho Builder 2 est une app locale, en lecture seule : carte des agents, agent actif en direct, avancement de chaque `US-XX`, questions en attente, livrables à valider, éléments de marque. Elle ne s'ouvre jamais d'elle-même : cette commande est son seul lanceur. Une fois lancée, elle reste en vie tant qu'un onglet du navigateur (ou le panneau Équipe de Claude Code) la suit, et s'arrête 30 min après la fermeture du dernier.
 
 ## Séquence
 
-1. Lance avec l'outil Bash, au premier plan, la commande « pour rouvrir la vue » donnée par le hook de démarrage dans le contexte de la session, telle quelle (chemins déjà échappés) :
-
-   ```bash
-   node '<dossier du plugin>/scripts/visual-engine.mjs' --open --project '<dossier du projet>'
-   ```
-
-   Si le contexte ne la donne pas (dossier qui n'était pas encore un projet Ottho au démarrage de la session), lance :
+1. Lance avec l'outil Bash, au premier plan :
 
    ```bash
    node "${CLAUDE_PLUGIN_ROOT}/scripts/visual-engine.mjs" --open --project "${CLAUDE_PROJECT_DIR:-$PWD}"

@@ -17,7 +17,7 @@ Agences et freelances qui construisent des apps web (Next.js + Supabase + Brevo/
 - **3 hooks de sécurité Git** : branch-guard (anti-commit direct main/develop), git-safe (anti-reset --hard / push --force), secret-scan (anti-fuite de clés API).
 - **5 templates** : CLAUDE.md, PRD, fiche feature SDD, plan technique, .gitignore.
 - **Panneau « Équipe » dans Claude Code** : le robot de chaque agent, son déroulé en direct et les validations qui t'attendent, à côté de la conversation (commande `/equipe`).
-- **Ottho Builder 2 inclus** (dossier `builder/`) : la vue du pipeline des agents dans le navigateur, ouverte au démarrage de Claude Code (commande `/pipeline`). Rien à installer : Node 20 ou plus suffit, l'interface est déjà construite.
+- **Ottho Builder 2 inclus** (dossier `builder/`) : la vue du pipeline des agents dans le navigateur, ouverte à la demande par la commande `/pipeline`. Rien à installer : Node 20 ou plus suffit, l'interface est déjà construite.
 
 ---
 
@@ -92,7 +92,7 @@ Lance `security-auditor` sur tout le projet (secrets, RLS + advisors Supabase, c
 
 ### Voir le pipeline (Ottho Builder 2)
 
-Ottho Builder 2 s'ouvre tout seul dans le navigateur au démarrage de Claude Code, dans un projet Ottho (brief, PRD, charte ou spec `specs/US-*.md`) ou un dossier vide, jamais dans le dossier personnel (hook `SessionStart`, `scripts/visual-engine.mjs`). Il s'arrête avec Claude Code : une dizaine de secondes après la fermeture de la dernière session ouverte sur ce projet (hook `SessionEnd`). Si Claude Code n'a pas pu le prévenir (fenêtre fermée de force, plantage), il s'arrête 30 min après la fermeture de son dernier onglet. La session suivante le relance. Pour le rouvrir :
+Ottho Builder 2 ne s'ouvre jamais de lui-même : il se lance à la demande, par la commande `/pipeline` (`scripts/visual-engine.mjs --open`), qui le démarre détaché s'il ne tourne pas encore puis ouvre le navigateur. Il s'arrête 30 min après la fermeture de son dernier onglet (panneau Équipe compris). Pour l'ouvrir ou le rouvrir :
 
 ```
 /pipeline
@@ -107,7 +107,7 @@ C'est une vue **en lecture seule** : carte des agents, agent en cours et ce qu'i
 
 Seul son panneau Config écrit : les variables d'environnement du projet, dans `.env.local`. La vue est alimentée par les hooks du plugin (`scripts/pipeline-event.mjs`), qui écrivent `.claude/pipeline-events.jsonl` (métadonnées seulement, jamais bloquants).
 
-Ottho Builder 2 est inclus dans le plugin (dossier `builder/`, interface déjà construite, serveur sans dépendance) : rien à installer ni à enregistrer, le hook de démarrage le lance avec le Node de la machine (20 ou plus). Les exemples de brief restent dans `~/.ottho-pipeline/briefs` ; un ancien `~/.ottho-pipeline/engine.json` (versions précédentes) ne sert plus et peut être supprimé. Détails et lancement à la main : `builder/README.md`.
+Ottho Builder 2 est inclus dans le plugin (dossier `builder/`, interface déjà construite, serveur sans dépendance) : rien à installer ni à enregistrer, `/pipeline` le lance avec le Node de la machine (20 ou plus). Les exemples de brief restent dans `~/.ottho-pipeline/briefs` ; un ancien `~/.ottho-pipeline/engine.json` (versions précédentes) ne sert plus et peut être supprimé. Détails et lancement à la main : `builder/README.md`.
 
 ### Panneau « Équipe » dans Claude Code
 
